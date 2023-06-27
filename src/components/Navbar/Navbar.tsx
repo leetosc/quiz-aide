@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useState } from "react";
-import logoImage from "../../../public/robotbook3.png";
+import logoImage from "../../../public/robotbook2.png";
 import Image from "next/image";
 import { Fragment } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
