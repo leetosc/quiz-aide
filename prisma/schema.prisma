@@ -2,7 +2,7 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-    provider = "prisma-client-js"
+    provider        = "prisma-client-js"
     previewFeatures = ["jsonProtocol"]
 }
 
@@ -49,13 +49,16 @@ model Session {
 }
 
 model User {
-    id            String    @id @default(cuid())
+    id            String     @id @default(cuid())
     name          String?
-    email         String?   @unique
+    email         String?    @unique
     emailVerified DateTime?
     image         String?
     accounts      Account[]
     sessions      Session[]
+    Question      Question[]
+    Quiz          Quiz[]
+    isAdmin       Boolean    @default(false)
 }
 
 model VerificationToken {
@@ -64,4 +67,39 @@ model VerificationToken {
     expires    DateTime
 
     @@unique([identifier, token])
+}
+
+model Question {
+    id           String   @id @default(cuid())
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+    questionText String
+    subject      String
+    author       User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+    authorId     String
+    isStarred    Boolean  @default(false)
+    answers      Answer[]
+    Quiz         Quiz?    @relation(fields: [quizId], references: [id])
+    quizId       String?
+}
+
+model Answer {
+    id         String   @id @default(cuid())
+    createdAt  DateTime @default(now())
+    updatedAt  DateTime @updatedAt
+    answerText String
+    question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+    questionId String
+    isCorrect  Boolean  @default(false)
+}
+
+model Quiz {
+    id          String     @id @default(cuid())
+    createdAt   DateTime   @default(now())
+    updatedAt   DateTime   @updatedAt
+    name        String
+    description String?
+    author      User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+    authorId    String
+    questions   Question[]
 }

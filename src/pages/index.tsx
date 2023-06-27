@@ -11,7 +11,7 @@ export default function Home() {
   return (
     <>
       <Seo />
-      <main className="flex min-h-screen flex-col bg-gradient-to-br from-slate-700 to-slate-800 pt-16 dark:from-gray-900 dark:to-slate-900">
+      <main className="flex min-h-screen flex-col bg-gradient-to-br from-slate-200 to-slate-300 pt-16 dark:from-gray-900 dark:to-slate-900">
         <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16 ">
           <h1 className="text-5xl font-extrabold tracking-tight text-white sm:text-[5rem]">
             Quiz <span className="text-[hsl(280,100%,70%)]">Ai</span>de
