@@ -1,12 +1,18 @@
 import { signIn, signOut, useSession } from "next-auth/react";
 
 import Link from "next/link";
+import { useState } from "react";
 import Seo from "~/components/Seo/Seo";
 import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
 import { api } from "~/utils/api";
 
 export default function Home() {
   const hello = api.example.hello.useQuery({ text: "from tRPC" });
+
+  const [topicInput, setTopicInput] = useState("");
+
+  const generateQuestions = api.questionRouter.generate.useMutation();
 
   return (
     <>
@@ -30,7 +36,6 @@ export default function Home() {
                 database and authentication.
               </div>
             </Link>
-
             <Link
               className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 text-white hover:bg-white/20"
               href="https://create.t3.gg/en/introduction"
@@ -42,6 +47,28 @@ export default function Home() {
                 to deploy it.
               </div>
             </Link>
+            <Input
+              value={topicInput}
+              onChange={(e) => setTopicInput(e.target.value)}
+              placeholder="Enter a topic"
+            />
+            <Button
+              isLoading={generateQuestions.isLoading}
+              onClick={() => {
+                generateQuestions
+                  .mutateAsync({
+                    numberOfQuestions: 10,
+                    topic: topicInput,
+                  })
+                  .then((res) => {
+                    console.log(res);
+                    console.log(res?.function_call?.arguments);
+                  })
+                  .catch((e) => console.log(e));
+              }}
+            >
+              Submit
+            </Button>
           </div>
           <div className="flex flex-col items-center gap-2">
             <p className="text-2xl text-white">
