@@ -50,11 +50,11 @@ export default function Navbar() {
     //       },
     //     ]
     //   : []),
-    {
-      name: "Buy Credits",
-      href: "/credits",
-      current: router.asPath === "/credits",
-    },
+    // {
+    //   name: "Buy Credits",
+    //   href: "/credits",
+    //   current: router.asPath === "/credits",
+    // },
   ];
 
   return (
@@ -121,7 +121,7 @@ export default function Navbar() {
             </div>
             <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
               {/* <Tooltip content="Submit Feedback">   */}
-              <button
+              {/* <button
                 type="button"
                 className=" mr-2 hidden rounded-md border border-slate-600 bg-gray-800 p-1 text-gray-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800 sm:block"
                 onClick={() => {
@@ -130,7 +130,7 @@ export default function Navbar() {
               >
                 <span className="sr-only">View notifications</span>
                 <MdOutlineFeedback className="h-6 w-6" aria-hidden="true" />
-              </button>
+              </button> */}
               <ModeToggle />
               {/* </Tooltip>   */}
 
