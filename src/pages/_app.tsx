@@ -5,6 +5,8 @@ import { api } from "~/utils/api";
 import "~/styles/globals.css";
 import { ThemeProvider } from "~/components/theme-provider";
 import Navbar from "~/components/Navbar/Navbar";
+import PlausibleProvider from "next-plausible";
+import { env } from "~/env.mjs";
 
 const MyApp: AppType<{ session: Session | null }> = ({
   Component,
@@ -12,10 +14,17 @@ const MyApp: AppType<{ session: Session | null }> = ({
 }) => {
   return (
     <SessionProvider session={session}>
-      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-        <Navbar />
-        <Component {...pageProps} />
-      </ThemeProvider>
+      <PlausibleProvider
+        domain={env.NEXT_PUBLIC_ANALYTICS_URL}
+        customDomain={env.NEXT_PUBLIC_ANALYTICS_SITE_NAME}
+        selfHosted={true}
+        trackOutboundLinks={true}
+      >
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+          <Navbar />
+          <Component {...pageProps} />
+        </ThemeProvider>
+      </PlausibleProvider>
     </SessionProvider>
   );
 };

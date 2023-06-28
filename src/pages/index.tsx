@@ -29,10 +29,13 @@ import Image from "next/image";
 import robotbook2 from "../../public/robotbook2.png";
 import Spinner from "~/components/Spinner/Spinner";
 import Link from "next/link";
+import { usePlausible } from "next-plausible";
 
 type QuestionsType = RouterOutputs["questionRouter"]["generate"]["questions"];
 
 export default function Home() {
+  const plausible = usePlausible();
+
   const [topicInput, setTopicInput] = useState("");
 
   const [questions, setQuestions] = useState<QuestionsType>([]);
@@ -76,6 +79,9 @@ export default function Home() {
 
   const exportToExcel = () => {
     console.log("Exporting questions...");
+
+    plausible("Export");
+
     setIsExporting(true);
     fetch("/KahootQuizTemplate.xlsx")
       .then((res) => {
@@ -140,6 +146,9 @@ export default function Home() {
           <h1 className="text-4xl font-extrabold tracking-tight dark:text-white sm:text-[3rem]">
             Quiz <span className="text-cyan-500">Ai</span>de
           </h1>
+          <p className="text-md  dark:text-white sm:text-lg">
+            Generate a quiz in seconds
+          </p>
 
           <Image src={robotbook2} alt="robot reading a book" width={200} />
           <div className="container max-w-xl ">
@@ -216,7 +225,17 @@ export default function Home() {
                   )}
                 </div>
                 <div className="flex flex-col gap-2 md:flex-row">
-                  <Button onClick={() => setShowQuestions(!showQuestions)}>
+                  <Button
+                    onClick={() => {
+                      plausible("Toggle Questions", {
+                        props: {
+                          showQuestions: !showQuestions,
+                        },
+                      });
+
+                      setShowQuestions(!showQuestions);
+                    }}
+                  >
                     {showQuestions ? "Hide" : "Show"} Questions{" "}
                     {showQuestions ? (
                       <HiOutlineEyeOff className="ml-1 text-lg" />
@@ -225,7 +244,16 @@ export default function Home() {
                     )}
                   </Button>
                   {showQuestions && (
-                    <Button onClick={() => setShowAnswers(!showAnswers)}>
+                    <Button
+                      onClick={() => {
+                        plausible("Toggle Answers", {
+                          props: {
+                            showAnswers: !showAnswers,
+                          },
+                        });
+                        setShowAnswers(!showAnswers);
+                      }}
+                    >
                       {showAnswers ? "Hide" : "Show"} Answers
                       {showAnswers ? (
                         <HiOutlineEyeOff className="ml-1 text-lg" />
@@ -248,7 +276,7 @@ export default function Home() {
               <span>
                 <p className="text-sm text-gray-600">
                   {
-                    "Remember that ChatGPT is incorrect very often, and has no knowledge past 2021. Please double check the answers."
+                    "I may not always be correct, and have no knowledge past 2021. Please fact check the answers!"
                   }
                 </p>
               </span>
