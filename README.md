@@ -1,28 +1,51 @@
-# Create T3 App
+# Quiz Aide
 
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
+Quiz Aide generates quiz questions based on the provided topic. These questions can then be exported to Kahoot for a fun and engaging learning experience.
 
-## What's next? How do I make an app with this?
+Technology Stack
+This application is built with the following technologies:
 
-We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.
-
-If you are not familiar with the different technologies used in this project, please refer to the respective docs. If you still are in the wind, please join our [Discord](https://t3.gg/discord) and ask for help.
-
+- [T3 Stack](https://create.t3.gg/)
 - [Next.js](https://nextjs.org)
 - [NextAuth.js](https://next-auth.js.org)
 - [Prisma](https://prisma.io)
 - [Tailwind CSS](https://tailwindcss.com)
 - [tRPC](https://trpc.io)
+- [OpenAI](https://platform.openai.com/docs/api-reference/chat/create)
+- [shadcn ui](https://ui.shadcn.com/)
 
-## Learn More
+## Installation
 
-To learn more about the [T3 Stack](https://create.t3.gg/), take a look at the following resources:
+Clone the repository:
 
-- [Documentation](https://create.t3.gg/)
-- [Learn the T3 Stack](https://create.t3.gg/en/faq#what-learning-resources-are-currently-available) — Check out these awesome tutorials
+```bash
+git clone https://github.com/leetosc/quiz-aide.git
+```
 
-You can check out the [create-t3-app GitHub repository](https://github.com/t3-oss/create-t3-app) — your feedback and contributions are welcome!
+Navigate to the project directory:
 
-## How do I deploy this?
+```bash
+cd quiz-aide
+```
 
-Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+Install the dependencies:
+
+```bash
+yarn
+```
+
+Start the development server:
+
+```bash
+yarn dev
+```
+
+The application will be available at http://localhost:3000.
+
+## Contributing
+
+Contributions to the Quiz Aide are welcome. If you have a feature request, bug report, or improvement to suggest, please open an issue for discussion. If you'd like to contribute code, please open a pull request.
+
+## License
+
+This project is licensed under the MIT License.
