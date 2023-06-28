@@ -2,6 +2,8 @@
 
 Quiz Aide generates quiz questions based on the provided topic. These questions can then be exported to Kahoot for a fun and engaging learning experience.
 
+<img src="https://quizaide.leeto.dev/robotbook2.png" width="350">
+
 ## Tech Stack
 
 This application is built with the following technologies:
