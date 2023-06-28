@@ -2,7 +2,8 @@
 
 Quiz Aide generates quiz questions based on the provided topic. These questions can then be exported to Kahoot for a fun and engaging learning experience.
 
-Technology Stack
+## Tech Stack
+
 This application is built with the following technologies:
 
 - [T3 Stack](https://create.t3.gg/)
