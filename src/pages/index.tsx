@@ -5,12 +5,21 @@ import { useState } from "react";
 import Seo from "~/components/Seo/Seo";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
-import { api } from "~/utils/api";
+import { api, type RouterOutputs } from "~/utils/api";
+import { read, utils, WorkSheet, writeFile } from "xlsx";
+
+type QuestionsType = RouterOutputs["questionRouter"]["generate"]["questions"];
 
 export default function Home() {
   const hello = api.example.hello.useQuery({ text: "from tRPC" });
 
   const [topicInput, setTopicInput] = useState("");
+
+  const [questions, setQuestions] = useState<QuestionsType>([]);
+  const [isExporting, setIsExporting] = useState(false);
+  const [timeLimit, setTimeLimit] = useState(20);
+
+  console.log("questions", questions);
 
   const generateQuestions = api.questionRouter.generate.useMutation();
 
@@ -55,6 +64,7 @@ export default function Home() {
             <Button
               isLoading={generateQuestions.isLoading}
               onClick={() => {
+                setQuestions([]);
                 generateQuestions
                   .mutateAsync({
                     numberOfQuestions: 10,
@@ -62,12 +72,74 @@ export default function Home() {
                   })
                   .then((res) => {
                     console.log(res);
-                    console.log(res?.function_call?.arguments);
+                    console.log(res.questions);
+                    setQuestions(res.questions);
                   })
                   .catch((e) => console.log(e));
               }}
             >
               Submit
+            </Button>
+            <Button
+              isLoading={isExporting}
+              onClick={() => {
+                console.log("Exporting questions...");
+                setIsExporting(true);
+                fetch("/KahootQuizTemplate.xlsx")
+                  .then((res) => {
+                    return res.arrayBuffer();
+                  })
+                  .then((ab) => {
+                    const wb = read(ab, { type: "buffer" });
+                    console.log(wb.SheetNames);
+                    console.log(wb.Sheets[wb.SheetNames[0] as string]);
+                    const questionList = [];
+                    for (const question of questions) {
+                      // Each question has between 2 to 4 answers
+                      const correctAnswerPositions = [];
+                      for (let i = 0; i < question.answers.length; i++) {
+                        if (question.answers[i]?.isCorrect)
+                          correctAnswerPositions.push(i + 1);
+                      }
+
+                      const newQuestion = {
+                        B: question.questionText,
+                        C: question.answers[0]?.text,
+                        D: question.answers[1]?.text,
+                        E: "",
+                        F: "",
+                        G: timeLimit,
+                        H: correctAnswerPositions.join(","),
+                      };
+
+                      if (question.answers[2]) {
+                        newQuestion["E"] = question.answers[2].text;
+                      }
+
+                      if (question.answers[3]) {
+                        newQuestion["F"] = question.answers[3].text;
+                      }
+
+                      questionList.push(newQuestion);
+                    }
+                    utils.sheet_add_json(
+                      wb.Sheets[
+                        wb.SheetNames[0] as keyof typeof wb.Sheets
+                      ] as WorkSheet,
+                      questionList,
+                      { origin: "B9", skipHeader: true }
+                    );
+                    writeFile(
+                      wb,
+                      `KahootQuizTemplate_${topicInput.substring(0, 10)}_${
+                        questions.length
+                      }-questions.xlsx`
+                    );
+                  })
+                  .finally(() => setIsExporting(false));
+              }}
+            >
+              Export
             </Button>
           </div>
           <div className="flex flex-col items-center gap-2">

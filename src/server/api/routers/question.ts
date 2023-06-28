@@ -83,7 +83,32 @@ export const questionRouter = createTRPCRouter({
 
         console.log(chatCompletion.data);
 
-        return chatCompletion.data.choices[0]?.message;
+        type Answer = {
+          text: string;
+          isCorrect: boolean;
+        };
+
+        type Quiz = {
+          questions: {
+            questionText: string;
+            answers: Answer[];
+          }[];
+        };
+
+        const responseQuestions = JSON.parse(
+          chatCompletion.data.choices[0]?.message?.function_call?.arguments ??
+            "{}"
+        ) as Quiz;
+
+        const randomizedQuiz: Quiz = { ...responseQuestions };
+
+        for (const question of randomizedQuiz.questions) {
+          question.answers.sort(() => Math.random() - 0.5);
+        }
+
+        console.log("response questions", responseQuestions);
+
+        return randomizedQuiz;
       } catch (err) {
         console.log(err);
 
