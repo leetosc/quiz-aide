@@ -15,8 +15,8 @@ const MyApp: AppType<{ session: Session | null }> = ({
   return (
     <SessionProvider session={session}>
       <PlausibleProvider
-        domain={env.NEXT_PUBLIC_ANALYTICS_URL}
-        customDomain={env.NEXT_PUBLIC_ANALYTICS_SITE_NAME}
+        domain={env.NEXT_PUBLIC_ANALYTICS_SITE_NAME}
+        customDomain={env.NEXT_PUBLIC_ANALYTICS_URL}
         selfHosted={true}
         trackOutboundLinks={true}
       >
