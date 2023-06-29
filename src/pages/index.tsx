@@ -30,8 +30,11 @@ import robotbook2 from "../../public/robotbook2.png";
 import Spinner from "~/components/Spinner/Spinner";
 import Link from "next/link";
 import { usePlausible } from "next-plausible";
+import { Progress } from "~/components/ui/progress";
+import { useToast } from "~/components/ui/use-toast";
 
 type QuestionsType = RouterOutputs["questionRouter"]["generate"]["questions"];
+type QuestionType = RouterOutputs["questionRouter"]["generateOne"];
 
 export default function Home() {
   const plausible = usePlausible();
@@ -48,33 +51,58 @@ export default function Home() {
   const [showQuestions, setShowQuestions] = useState(false);
   const [showAnswers, setShowAnswers] = useState(false);
 
-  console.log("questions", questions);
+  const [generatingProgress, setGeneratingProgress] = useState(0);
+  const [isGeneratingMultiple, setIsGeneratingMultiple] = useState(false);
+
+  const { toast } = useToast();
+
   console.log(
     "answers",
     questions.map((q) => q.answers.findIndex((a) => a.isCorrect) + 1).join(",")
   );
 
-  const generateQuestions = api.questionRouter.generate.useMutation();
+  const generateQuestionSingle = api.questionRouter.generateOne.useMutation();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    void handleGenerateMultipleQuestions();
+  };
+
+  // call generate single multiple times and show progress bar
+  const handleGenerateMultipleQuestions = async () => {
+    setIsGeneratingMultiple(true);
+    setGeneratingProgress(0);
     setQuestions([]);
     setShowQuestions(false);
     setShowAnswers(false);
     setHasExported(false);
 
-    generateQuestions
-      .mutateAsync({
-        numberOfQuestions: numberOfQuestions,
-        topic: topicInput,
-      })
-      .then((res) => {
-        console.log(res);
-        console.log(res.questions);
-        setQuestions(res.questions);
-      })
-      .catch((e) => console.log(e));
+    const generatedQuestions: QuestionType[] = [];
+
+    for (let i = 0; i < numberOfQuestions; i++) {
+      try {
+        const newQuestion = await generateQuestionSingle.mutateAsync({
+          topic: topicInput,
+          previousQuestions: generatedQuestions.map((q) => q.questionText),
+        });
+
+        generatedQuestions.push(newQuestion);
+        console.log("newQuestion", newQuestion);
+
+        setGeneratingProgress(((i + 1) / numberOfQuestions) * 100);
+      } catch (e) {
+        console.log(e);
+        toast({
+          title: "Error",
+          description:
+            "An error occured while generating questions. Please try again.",
+        });
+      }
+    }
+
+    setQuestions(generatedQuestions);
+    setIsGeneratingMultiple(false);
   };
 
   const exportToExcel = () => {
@@ -195,8 +223,15 @@ export default function Home() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button isLoading={generateQuestions.isLoading} type="submit">
-                  {generateQuestions.isLoading && (
+
+                <Button
+                  isLoading={
+                    generateQuestionSingle.isLoading || isGeneratingMultiple
+                  }
+                  type="submit"
+                >
+                  {(generateQuestionSingle.isLoading ||
+                    isGeneratingMultiple) && (
                     <span className="mr-2">
                       <Spinner size="md" />
                     </span>
@@ -206,6 +241,12 @@ export default function Home() {
                 </Button>
               </div>
             </form>
+
+            {isGeneratingMultiple && (
+              <div className="my-4">
+                <Progress value={generatingProgress} />
+              </div>
+            )}
             {questions.length ? (
               <div className="mt-4 flex flex-col gap-2">
                 <div className="flex flex-col gap-2 md:flex-row">
