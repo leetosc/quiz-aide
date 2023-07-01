@@ -14,7 +14,7 @@ This application is built with the following technologies:
 - [Prisma](https://prisma.io)
 - [Tailwind CSS](https://tailwindcss.com)
 - [tRPC](https://trpc.io)
-- [OpenAI](https://platform.openai.com/docs/api-reference/chat/create)
+- [OpenAI](https://platform.openai.com/docs/api-reference/chat/create) Function Calling
 - [shadcn ui](https://ui.shadcn.com/)
 
 ## Installation
