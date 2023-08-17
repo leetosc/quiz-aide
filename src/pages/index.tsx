@@ -32,14 +32,18 @@ import Link from "next/link";
 import { usePlausible } from "next-plausible";
 import { Progress } from "~/components/ui/progress";
 import { useToast } from "~/components/ui/use-toast";
+import { Checkbox } from "~/components/ui/checkbox";
 
 type QuestionsType = RouterOutputs["questionRouter"]["generate"]["questions"];
 type QuestionType = RouterOutputs["questionRouter"]["generateOne"];
 
 export default function Home() {
   const plausible = usePlausible();
+  const { status: sessionStatus } = useSession();
+  const isLoggedIn = sessionStatus === "authenticated";
 
   const [topicInput, setTopicInput] = useState("");
+  const [useBestModel, setUseBestModel] = useState(false);
 
   const [questions, setQuestions] = useState<QuestionsType>([]);
   const [isExporting, setIsExporting] = useState(false);
@@ -85,6 +89,7 @@ export default function Home() {
         const newQuestion = await generateQuestionSingle.mutateAsync({
           topic: topicInput,
           previousQuestions: generatedQuestions.map((q) => q.questionText),
+          useBestModel: useBestModel,
         });
 
         generatedQuestions.push(newQuestion);
@@ -175,7 +180,7 @@ export default function Home() {
             Quiz <span className="text-cyan-500">Ai</span>de
           </h1>
           <p className="text-md  dark:text-white sm:text-lg">
-            Generate a quiz in seconds
+            Generate a quiz in minutes
           </p>
 
           <Image src={robotbook2} alt="robot reading a book" width={200} />
@@ -224,21 +229,44 @@ export default function Home() {
                   </Select>
                 </div>
 
-                <Button
-                  isLoading={
-                    generateQuestionSingle.isLoading || isGeneratingMultiple
-                  }
-                  type="submit"
-                >
-                  {(generateQuestionSingle.isLoading ||
-                    isGeneratingMultiple) && (
-                    <span className="mr-2">
-                      <Spinner size="md" />
-                    </span>
-                  )}
-                  Generate Questions
-                  <HiOutlineSparkles className="ml-1 text-lg" />
-                </Button>
+                <div className="col-span-2 flex w-full gap-2">
+                  <Button
+                    isLoading={
+                      generateQuestionSingle.isLoading || isGeneratingMultiple
+                    }
+                    type="submit"
+                    className="w-full"
+                  >
+                    {(generateQuestionSingle.isLoading ||
+                      isGeneratingMultiple) && (
+                      <span className="mr-2">
+                        <Spinner size="md" />
+                      </span>
+                    )}
+                    Generate Questions
+                    <HiOutlineSparkles className="ml-1 text-lg" />
+                  </Button>
+
+                  {isLoggedIn ? (
+                    <div className="flex w-full justify-center">
+                      <div className="items-top flex space-x-2">
+                        <Checkbox
+                          id="useBestModel"
+                          onCheckedChange={() => setUseBestModel(!useBestModel)}
+                          checked={useBestModel}
+                        />
+                        <div className="grid gap-1.5 leading-none">
+                          <label
+                            htmlFor="useBestModel"
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            Use best model
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </form>
 

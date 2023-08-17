@@ -4,7 +4,7 @@ import logoImage from "../../../public/robotbook2.png";
 import Image from "next/image";
 import { Fragment } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import * as Tooltip from "@radix-ui/react-tooltip";
+
 // import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import { signIn, signOut, useSession } from "next-auth/react";
 import axios, {
@@ -21,9 +21,17 @@ import { RiCoinsLine } from "react-icons/ri";
 import { useRouter } from "next/router";
 import { MdClose, MdMenu, MdOutlineFeedback } from "react-icons/md";
 import { ModeToggle } from "~/components/DarkModeToggle/DarkModeToggle";
+import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 // import FeedbackModal from "../FeedbackModal/FeedbackModal";
 // import IssueOccurredModal from "../IssueOccurredModal/IssueOccurredModal";
 // import NoMembersProfileModal from "../NoMembersProfileModal/NoMembersProfileModal";
+
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(" ");
@@ -39,6 +47,13 @@ export default function Navbar() {
   const [reloadModalIsOpen, setReloadModalIsOpen] = useState(false);
 
   const [open, setOpen] = useState(false);
+
+  const {
+    data: sessionData,
+    status: sessionStatus,
+    update: updateSession,
+  } = useSession();
+  const isLoggedIn = sessionStatus === "authenticated";
 
   const navigation: { name: string; href: string; current: boolean }[] = [
     // ...(isLoggedIn
@@ -119,7 +134,7 @@ export default function Navbar() {
                 </div>
               </div>
             </div>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
+            <div className="absolute inset-y-0 right-0 flex items-center gap-2 pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
               {/* <Tooltip content="Submit Feedback">   */}
               {/* <button
                 type="button"
@@ -213,6 +228,53 @@ export default function Navbar() {
                   </button>  
                 </div>  
               )}   */}
+              {!isLoggedIn ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="inline-flex min-w-[80px] justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 px-3 py-2 text-center text-sm font-medium text-white transition duration-150 hover:bg-gradient-to-bl focus:outline-none focus:ring-4 focus:ring-blue-800  sm:px-5"
+                    onClick={() => {
+                      if (!(sessionStatus === "loading")) {
+                        void signIn();
+                      }
+                    }}
+                  >
+                    {sessionStatus === "loading" ? (
+                      <span className="flex items-center justify-center">
+                        Loading
+                      </span>
+                    ) : (
+                      <span>Sign in</span>
+                    )}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Avatar
+                          className="cursor-pointer hover:opacity-80"
+                          onClick={() => {
+                            void signOut();
+                          }}
+                        >
+                          <AvatarImage src={sessionData?.user.image || ""} />
+                          <AvatarFallback>
+                            {(sessionData?.user.name || "")
+                              .split(" ")
+                              .map((word) => word.charAt(0))
+                              .join("")}
+                          </AvatarFallback>
+                        </Avatar>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Sign out</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </>
+              )}
             </div>
           </div>
         </div>

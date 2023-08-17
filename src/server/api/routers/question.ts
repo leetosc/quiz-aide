@@ -7,6 +7,7 @@ import {
 import { Configuration, OpenAIApi } from "openai";
 import { env } from "~/env.mjs";
 import { TRPCError } from "@trpc/server";
+import { MODELS } from "~/utils/constants";
 
 export const questionRouter = createTRPCRouter({
   hello: publicProcedure
@@ -33,7 +34,7 @@ export const questionRouter = createTRPCRouter({
 
       try {
         const chatCompletion = await openai.createChatCompletion({
-          model: "gpt-3.5-turbo-0613",
+          model: MODELS.GPT4,
           messages: [{ role: "user", content: questionPrompt }],
           functions: [
             {
@@ -121,7 +122,11 @@ export const questionRouter = createTRPCRouter({
 
   generateOne: publicProcedure
     .input(
-      z.object({ topic: z.string(), previousQuestions: z.array(z.string()) })
+      z.object({
+        topic: z.string(),
+        previousQuestions: z.array(z.string()),
+        useBestModel: z.boolean(),
+      })
     )
     .mutation(async ({ input, ctx }) => {
       const configuration = new Configuration({
@@ -143,7 +148,10 @@ export const questionRouter = createTRPCRouter({
 
       try {
         const chatCompletion = await openai.createChatCompletion({
-          model: "gpt-3.5-turbo-0613",
+          model:
+            input.useBestModel && ctx.session?.user.id
+              ? MODELS.GPT4
+              : MODELS.GPT35,
           messages: [{ role: "user", content: questionPrompt }],
           functions: [
             {
