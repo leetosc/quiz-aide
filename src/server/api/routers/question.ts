@@ -150,7 +150,7 @@ export const questionRouter = createTRPCRouter({
         const chatCompletion = await openai.createChatCompletion({
           model:
             input.useBestModel && ctx.session?.user.id
-              ? MODELS.GPT4
+              ? MODELS.GPT4TURBO
               : MODELS.GPT35,
           messages: [{ role: "user", content: questionPrompt }],
           functions: [
