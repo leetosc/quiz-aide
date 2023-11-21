@@ -138,7 +138,7 @@ export const questionRouter = createTRPCRouter({
         input.topic
       }. Give me ${
         input.previousQuestions.length ? "another" : "a"
-      } question about the topic, with 4 answers per question. The difficulty level of the question should be for college graduates. Please give me 1 correct answer for the question. The question can not be longer than 120 characters, and the answers can not be longer than 75 characters. ${
+      } question about the topic, with 4 answers per question. The difficulty level of the question should be for college graduates or working professionals. Please give me 1 correct answer for the question. The question can not be longer than 120 characters, and the answers can not be longer than 75 characters. ${
         input.previousQuestions.length > 0
           ? `Here is the list of previous questions so you can avoid repeating questions: ${input.previousQuestions.join(
               ", "
