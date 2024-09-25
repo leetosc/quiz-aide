@@ -1,25 +1,16 @@
 /* eslint-disable @next/next/no-img-element */
-import { useEffect, useState } from "react";
-import logoImage from "../../../public/robotbook2.png";
 import Image from "next/image";
-import { Fragment } from "react";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { useState } from "react";
+import logoImage from "../../../public/robotbook2.png";
+// import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
 // import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import { signIn, signOut, useSession } from "next-auth/react";
-import axios, {
-  type AxiosError,
-  isAxiosError,
-  type AxiosResponse,
-} from "axios";
-import { useQuery } from "@tanstack/react-query";
 // import { type ProfileType } from "~/types/types";
 import Link from "next/link";
-import { api } from "~/utils/api";
-import { RiCoinsLine } from "react-icons/ri";
 
 import { useRouter } from "next/router";
-import { MdClose, MdMenu, MdOutlineFeedback } from "react-icons/md";
+import { MdClose, MdMenu } from "react-icons/md";
 import { ModeToggle } from "~/components/DarkModeToggle/DarkModeToggle";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 // import FeedbackModal from "../FeedbackModal/FeedbackModal";
@@ -27,11 +18,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 // import NoMembersProfileModal from "../NoMembersProfileModal/NoMembersProfileModal";
 
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "~/components/ui/tooltip";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(" ");
@@ -250,29 +243,30 @@ export default function Navbar() {
                 </div>
               ) : (
                 <>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Avatar
-                          className="cursor-pointer hover:opacity-80"
-                          onClick={() => {
-                            void signOut();
-                          }}
-                        >
-                          <AvatarImage src={sessionData?.user.image || ""} />
-                          <AvatarFallback>
-                            {(sessionData?.user.name || "")
-                              .split(" ")
-                              .map((word) => word.charAt(0))
-                              .join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Sign out</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger>
+                      <Avatar className="cursor-pointer hover:opacity-80">
+                        <AvatarImage src={sessionData?.user.image || ""} />
+                        <AvatarFallback>
+                          {(sessionData?.user.name || "")
+                            .split(" ")
+                            .map((word) => word.charAt(0))
+                            .join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => {
+                          void signOut();
+                        }}
+                      >
+                        Sign Out
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </>
               )}
             </div>

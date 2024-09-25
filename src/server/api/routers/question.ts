@@ -34,7 +34,7 @@ export const questionRouter = createTRPCRouter({
 
       try {
         const chatCompletion = await openai.createChatCompletion({
-          model: MODELS.GPT4_TURBO,
+          model: MODELS.GPT_4O,
           messages: [{ role: "user", content: questionPrompt }],
           functions: [
             {
@@ -150,8 +150,8 @@ export const questionRouter = createTRPCRouter({
         const chatCompletion = await openai.createChatCompletion({
           model:
             input.useBestModel && ctx.session?.user.id
-              ? MODELS.GPT4_TURBO
-              : MODELS.GPT35,
+              ? MODELS.GPT_4O
+              : MODELS.GPT_4O_MINI,
           messages: [{ role: "user", content: questionPrompt }],
           functions: [
             {
