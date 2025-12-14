@@ -7,7 +7,23 @@ import {
 import { Configuration, OpenAIApi } from "openai";
 import { env } from "~/env.mjs";
 import { TRPCError } from "@trpc/server";
-import { MODELS } from "~/utils/constants";
+import { MODELS, DIFFICULTY_LEVELS } from "~/utils/constants";
+
+const getOpenAI = (deploymentId: string) => {
+  const configuration = new Configuration({
+    apiKey: env.AZURE_OPENAI_API_KEY as string,
+    basePath: `${
+      env.AZURE_OPENAI_ENDPOINT as string
+    }/openai/deployments/${deploymentId}`,
+  });
+  return new OpenAIApi(configuration);
+};
+
+const AZURE_API_OPTIONS = {
+  params: {
+    "api-version": env.AZURE_OPENAI_API_VERSION as string,
+  },
+};
 
 export const questionRouter = createTRPCRouter({
   hello: publicProcedure
@@ -24,63 +40,63 @@ export const questionRouter = createTRPCRouter({
 
   generate: publicProcedure
     .input(z.object({ topic: z.string(), numberOfQuestions: z.number() }))
-    .mutation(async ({ input, ctx }) => {
-      const configuration = new Configuration({
-        apiKey: env.OPENAI_API_KEY,
-      });
-      const openai = new OpenAIApi(configuration);
+    .mutation(async ({ input }) => {
+      const openai = getOpenAI(MODELS.GPT_4O);
 
-      const questionPrompt = `I want to make a quiz about ${input.topic}. I want ${input.numberOfQuestions} questions, with 4 answers per question. The difficulty level of the questions should be for college graduates. Please give me 1 correct answer for each question. The question can not be longer than 120 characters, and the answers can not be longer than 75 characters.`;
+      const questionPrompt = `I want to make a kahoot quiz about ${input.topic}. I want ${input.numberOfQuestions} questions, with 4 answers per question. The difficulty level of the questions should be for college graduates. Please give me 1 correct answer for each question. The question can not be longer than 120 characters, and the answers can not be longer than 75 characters.`;
 
       try {
-        const chatCompletion = await openai.createChatCompletion({
-          model: MODELS.GPT_4O,
-          messages: [{ role: "user", content: questionPrompt }],
-          functions: [
-            {
-              name: "generate_questions",
-              description:
-                "Generate a set of questions with corresponding answers",
-              parameters: {
-                type: "object",
-                properties: {
-                  questions: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        questionText: {
-                          type: "string",
-                          description: "The text of the question",
-                        },
-                        answers: {
-                          type: "array",
-                          items: {
-                            type: "object",
-                            properties: {
-                              text: {
-                                type: "string",
-                                description: "The text of the answer",
+        const chatCompletion = await openai.createChatCompletion(
+          {
+            model: MODELS.GPT_4O, // In Azure this is often ignored but good to keep
+            messages: [{ role: "user", content: questionPrompt }],
+            functions: [
+              {
+                name: "generate_questions",
+                description:
+                  "Generate a set of questions with corresponding answers",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    questions: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          questionText: {
+                            type: "string",
+                            description: "The text of the question",
+                          },
+                          answers: {
+                            type: "array",
+                            items: {
+                              type: "object",
+                              properties: {
+                                text: {
+                                  type: "string",
+                                  description: "The text of the answer",
+                                },
+                                isCorrect: {
+                                  type: "boolean",
+                                  description:
+                                    "Indicates whether the answer is correct",
+                                },
                               },
-                              isCorrect: {
-                                type: "boolean",
-                                description:
-                                  "Indicates whether the answer is correct",
-                              },
+                              required: ["text", "isCorrect"],
                             },
-                            required: ["text", "isCorrect"],
                           },
                         },
+                        required: ["questionText", "answers"],
                       },
-                      required: ["questionText", "answers"],
                     },
                   },
+                  required: ["questions"],
                 },
-                required: ["questions"],
               },
-            },
-          ],
-        });
+            ],
+          },
+          AZURE_API_OPTIONS
+        );
 
         console.log(chatCompletion.data);
 
@@ -125,20 +141,36 @@ export const questionRouter = createTRPCRouter({
       z.object({
         topic: z.string(),
         previousQuestions: z.array(z.string()),
-        useBestModel: z.boolean(),
+        model: z.string(),
+        difficultyLevel: z.string().optional(),
       })
     )
-    .mutation(async ({ input, ctx }) => {
-      const configuration = new Configuration({
-        apiKey: env.OPENAI_API_KEY,
-      });
-      const openai = new OpenAIApi(configuration);
+    .mutation(async ({ input }) => {
+      // Validate model
+      const model = Object.values(MODELS).includes(input.model)
+        ? input.model
+        : MODELS.GPT_5_MINI; // Default fallback
 
-      const questionPrompt = `I want to make a quiz about ${
+      // Map difficulty level to prompt text
+      const difficultyMap: Record<string, string> = {
+        [DIFFICULTY_LEVELS.HIGH_SCHOOL]: "high school students",
+        [DIFFICULTY_LEVELS.COLLEGE]:
+          "college graduates or working professionals",
+        [DIFFICULTY_LEVELS.POST_GRAD]:
+          "post-graduate students or experts in the field",
+      };
+
+      const difficultyText =
+        difficultyMap[input.difficultyLevel ?? DIFFICULTY_LEVELS.COLLEGE] ??
+        "college graduates or working professionals";
+
+      const openai = getOpenAI(model);
+
+      const questionPrompt = `I want to make a kahoot quiz about ${
         input.topic
       }. Give me ${
         input.previousQuestions.length ? "another" : "a"
-      } question about the topic, with 4 answers per question. The difficulty level of the question should be for college graduates or working professionals. Please give me 1 correct answer for the question. The question can not be longer than 120 characters, and the answers can not be longer than 75 characters. ${
+      } question about the topic, with 4 answers per question. The difficulty level of the question should be for ${difficultyText}. Please give me 1 correct answer for the question. The question can not be longer than 120 characters, and the answers can not be longer than 75 characters. ${
         input.previousQuestions.length > 0
           ? `Here is the list of previous questions so you can avoid repeating questions: ${input.previousQuestions.join(
               ", "
@@ -147,54 +179,57 @@ export const questionRouter = createTRPCRouter({
       }. Come up with a variety of questions on the topic.`;
 
       try {
-        const chatCompletion = await openai.createChatCompletion({
-          model:
-            input.useBestModel && ctx.session?.user.id
-              ? MODELS.GPT_4O
-              : MODELS.GPT_4O_MINI,
-          messages: [{ role: "user", content: questionPrompt }],
-          functions: [
-            {
-              name: "generate_question",
-              description:
-                "Generate a single question with corresponding answers",
-              parameters: {
-                type: "object",
-                properties: {
-                  question: {
-                    type: "object",
-                    properties: {
-                      questionText: {
-                        type: "string",
-                        description: "The text of the question",
-                      },
-                      answers: {
-                        type: "array",
-                        items: {
-                          type: "object",
-                          properties: {
-                            text: {
-                              type: "string",
-                              description: "The text of the answer",
+        const chatCompletion = await openai.createChatCompletion(
+          {
+            model: model,
+            messages: [{ role: "user", content: questionPrompt }],
+            functions: [
+              {
+                name: "generate_question",
+                description:
+                  "Generate a single question with corresponding answers",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    question: {
+                      type: "object",
+                      properties: {
+                        questionText: {
+                          type: "string",
+                          description: "The text of the question",
+                        },
+                        answers: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              text: {
+                                type: "string",
+                                description: "The text of the answer",
+                              },
+                              isCorrect: {
+                                type: "boolean",
+                                description:
+                                  "Indicates whether the answer is correct",
+                              },
                             },
-                            isCorrect: {
-                              type: "boolean",
-                              description:
-                                "Indicates whether the answer is correct",
-                            },
+                            required: ["text", "isCorrect"],
                           },
-                          required: ["text", "isCorrect"],
                         },
                       },
+                      required: ["questionText", "answers"],
                     },
-                    required: ["questionText", "answers"],
                   },
+                  required: ["question"],
                 },
-                required: ["question"],
               },
-            },
-          ],
-        });
+            ],
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore-next-line
+            reasoning_effort: "minimal",
+          },
+          AZURE_API_OPTIONS
+        );
 
         console.log(chatCompletion.data);
 

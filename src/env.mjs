@@ -25,7 +25,10 @@ export const env = createEnv({
     DISCORD_CLIENT_SECRET: z.string(),
     GOOGLE_CLIENT_ID: z.string(),
     GOOGLE_CLIENT_SECRET: z.string(),
-    OPENAI_API_KEY: z.string(),
+    // OPENAI_API_KEY: z.string(), // Deprecated in favor of Azure
+    AZURE_OPENAI_API_KEY: z.string(),
+    AZURE_OPENAI_ENDPOINT: z.string(),
+    AZURE_OPENAI_API_VERSION: z.string().default("2023-05-15"),
   },
 
   /**
@@ -52,7 +55,10 @@ export const env = createEnv({
     DISCORD_CLIENT_SECRET: process.env.DISCORD_CLIENT_SECRET,
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    // OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    AZURE_OPENAI_API_KEY: process.env.AZURE_OPENAI_API_KEY,
+    AZURE_OPENAI_ENDPOINT: process.env.AZURE_OPENAI_ENDPOINT,
+    AZURE_OPENAI_API_VERSION: process.env.AZURE_OPENAI_API_VERSION,
     NEXT_PUBLIC_ANALYTICS_URL: process.env.NEXT_PUBLIC_ANALYTICS_URL,
     NEXT_PUBLIC_ANALYTICS_SITE_NAME:
       process.env.NEXT_PUBLIC_ANALYTICS_SITE_NAME,
