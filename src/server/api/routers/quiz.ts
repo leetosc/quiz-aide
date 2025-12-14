@@ -44,7 +44,7 @@ export const quizRouter = createTRPCRouter({
 
       const questionContext = input.questionSamples?.length
         ? ` Some sample questions: ${input.questionSamples
-            .slice(0, 3)
+            .slice(0, 10)
             .join("; ")}`
         : "";
 
@@ -55,7 +55,10 @@ export const quizRouter = createTRPCRouter({
           {
             model: MODELS.GPT_5_MINI,
             messages: [{ role: "user", content: titlePrompt }],
-            max_tokens: 60,
+            // max_tokens: 60,
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore-next-line
+            reasoning_effort: "minimal",
           },
           AZURE_API_OPTIONS
         );
@@ -393,5 +396,3 @@ export const quizRouter = createTRPCRouter({
       return { success: true };
     }),
 });
-
-

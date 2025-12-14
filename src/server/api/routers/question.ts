@@ -152,8 +152,7 @@ export const questionRouter = createTRPCRouter({
       // Map difficulty level to prompt text
       const difficultyMap: Record<string, string> = {
         [DIFFICULTY_LEVELS.HIGH_SCHOOL]: "high school students",
-        [DIFFICULTY_LEVELS.COLLEGE]:
-          "college graduates or working professionals",
+        [DIFFICULTY_LEVELS.COLLEGE]: "college students",
         [DIFFICULTY_LEVELS.POST_GRAD]:
           "post-graduate students or experts in the field",
       };
@@ -224,7 +223,7 @@ export const questionRouter = createTRPCRouter({
             ],
             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-ignore-next-line
-            reasoning_effort: "minimal",
+            reasoning_effort: "low",
           },
           AZURE_API_OPTIONS
         );
