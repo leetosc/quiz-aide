@@ -93,6 +93,8 @@ export const authOptions: NextAuthOptions = {
           session.error = "RefreshAccessTokenError";
         }
       }
+      // Add user id to session
+      session.user.id = user.id;
       return session;
     },
   },
