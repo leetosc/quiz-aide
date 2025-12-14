@@ -11,17 +11,15 @@ import { MODELS, DIFFICULTY_LEVELS } from "~/utils/constants";
 
 const getOpenAI = (deploymentId: string) => {
   const configuration = new Configuration({
-    apiKey: env.AZURE_OPENAI_API_KEY as string,
-    basePath: `${
-      env.AZURE_OPENAI_ENDPOINT as string
-    }/openai/deployments/${deploymentId}`,
+    apiKey: env.AZURE_OPENAI_API_KEY,
+    basePath: `${env.AZURE_OPENAI_ENDPOINT}/openai/deployments/${deploymentId}`,
   });
   return new OpenAIApi(configuration);
 };
 
 const AZURE_API_OPTIONS = {
   params: {
-    "api-version": env.AZURE_OPENAI_API_VERSION as string,
+    "api-version": env.AZURE_OPENAI_API_VERSION,
   },
 };
 
