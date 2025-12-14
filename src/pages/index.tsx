@@ -19,6 +19,8 @@ import {
   HiOutlineEye,
   HiOutlineEyeOff,
   HiOutlineSparkles,
+  HiOutlineSave,
+  HiOutlineCollection,
 } from "react-icons/hi";
 import { MdFileDownload, MdInfo } from "react-icons/md";
 import { Label } from "~/components/ui/label";
@@ -42,6 +44,7 @@ import Image from "next/image";
 import robotbook2 from "../../public/robotbook2.png";
 import Spinner from "~/components/Spinner/Spinner";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { usePlausible } from "next-plausible";
 import { Progress } from "~/components/ui/progress";
 import { useToast } from "~/components/ui/use-toast";
@@ -56,6 +59,7 @@ type QuestionType = RouterOutputs["questionRouter"]["generateOne"];
 
 export default function Home() {
   const plausible = usePlausible();
+  const router = useRouter();
   const { status: sessionStatus } = useSession();
   const isLoggedIn = sessionStatus === "authenticated";
 
@@ -97,6 +101,8 @@ export default function Home() {
     null
   );
   const [showExportModal, setShowExportModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedQuizId, setSavedQuizId] = useState<string | null>(null);
 
   const { toast } = useToast();
 
@@ -105,6 +111,8 @@ export default function Home() {
   const ANSWER_CHAR_LIMIT = 75;
 
   const generateQuestionSingle = api.questionRouter.generateOne.useMutation();
+  const generateTitle = api.quiz.generateTitle.useMutation();
+  const createQuiz = api.quiz.create.useMutation();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -120,6 +128,7 @@ export default function Home() {
     setShowQuestions(false);
     setShowAnswers(false);
     setHasExported(false);
+    setSavedQuizId(null);
 
     const generatedQuestions: QuestionType[] = [];
 
@@ -148,6 +157,62 @@ export default function Home() {
 
     setQuestions(generatedQuestions);
     setIsGeneratingMultiple(false);
+
+    // Auto-save for logged in users
+    if (isLoggedIn && generatedQuestions.length > 0) {
+      await handleSaveQuiz(generatedQuestions);
+    }
+  };
+
+  // Save quiz to database
+  const handleSaveQuiz = async (questionsToSave?: QuestionType[]) => {
+    const questionsData = questionsToSave || questions;
+    if (questionsData.length === 0) return;
+
+    setIsSaving(true);
+
+    try {
+      // Generate AI title
+      const title = await generateTitle.mutateAsync({
+        topic: topicInput,
+        questionSamples: questionsData.slice(0, 3).map((q) => q.questionText),
+      });
+
+      // Create the quiz
+      const quiz = await createQuiz.mutateAsync({
+        name: title,
+        topic: topicInput,
+        timeLimit: Number(timeLimitInput),
+        difficulty: difficultyLevel,
+        questions: questionsData.map((q) => ({
+          questionText: q.questionText,
+          answers: q.answers,
+        })),
+      });
+
+      setSavedQuizId(quiz.id);
+      toast({
+        title: "Quiz saved!",
+        description: (
+          <span>
+            Your quiz has been saved to your{" "}
+            <Link href="/dashboard" className="font-medium underline">
+              dashboard
+            </Link>
+            .
+          </span>
+        ),
+      });
+    } catch (e) {
+      console.error("Failed to save quiz:", e);
+      toast({
+        title: "Failed to save quiz",
+        description: "There was an error saving your quiz. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Question editing handlers
@@ -465,6 +530,31 @@ export default function Home() {
                   <Button onClick={() => setShowExportModal(true)}>
                     Export to Kahoot <MdFileDownload className="ml-1 text-lg" />
                   </Button>
+                  {isLoggedIn && (
+                    <>
+                      {savedQuizId ? (
+                        <Link href={`/quiz/${savedQuizId}`}>
+                          <Button variant="outline">
+                            <HiOutlineCollection className="mr-1 text-lg" />
+                            View in Dashboard
+                          </Button>
+                        </Link>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          onClick={() => void handleSaveQuiz()}
+                          disabled={isSaving}
+                        >
+                          {isSaving ? (
+                            <Spinner size="md" />
+                          ) : (
+                            <HiOutlineSave className="mr-1 text-lg" />
+                          )}
+                          {isSaving ? "Saving..." : "Save to Dashboard"}
+                        </Button>
+                      )}
+                    </>
+                  )}
                   <Button
                     variant="outline"
                     onClick={() => {

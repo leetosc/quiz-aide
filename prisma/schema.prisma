@@ -70,17 +70,28 @@ model VerificationToken {
 }
 
 model Question {
-    id           String   @id @default(cuid())
-    createdAt    DateTime @default(now())
-    updatedAt    DateTime @updatedAt
+    id           String         @id @default(cuid())
+    createdAt    DateTime       @default(now())
+    updatedAt    DateTime       @updatedAt
     questionText String
     subject      String
-    author       User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+    author       User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
     authorId     String
-    isStarred    Boolean  @default(false)
+    isStarred    Boolean        @default(false)
     answers      Answer[]
-    Quiz         Quiz?    @relation(fields: [quizId], references: [id])
-    quizId       String?
+    quizzes      QuizQuestion[]
+}
+
+model QuizQuestion {
+    id         String   @id @default(cuid())
+    quiz       Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+    quizId     String
+    question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+    questionId String
+    order      Int      @default(0)
+    createdAt  DateTime @default(now())
+
+    @@unique([quizId, questionId])
 }
 
 model Answer {
@@ -94,12 +105,15 @@ model Answer {
 }
 
 model Quiz {
-    id          String     @id @default(cuid())
-    createdAt   DateTime   @default(now())
-    updatedAt   DateTime   @updatedAt
+    id          String         @id @default(cuid())
+    createdAt   DateTime       @default(now())
+    updatedAt   DateTime       @updatedAt
     name        String
     description String?
-    author      User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+    topic       String?
+    timeLimit   Int            @default(20)
+    difficulty  String?
+    author      User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
     authorId    String
-    questions   Question[]
+    questions   QuizQuestion[]
 }

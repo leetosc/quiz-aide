@@ -49,20 +49,15 @@ export default function Navbar() {
   const isLoggedIn = sessionStatus === "authenticated";
 
   const navigation: { name: string; href: string; current: boolean }[] = [
-    // ...(isLoggedIn
-    //   ? [
-    //       {
-    //         name: "History",
-    //         href: "/history",
-    //         current: router.asPath === "/history",
-    //       },
-    //     ]
-    //   : []),
-    // {
-    //   name: "Buy Credits",
-    //   href: "/credits",
-    //   current: router.asPath === "/credits",
-    // },
+    ...(isLoggedIn
+      ? [
+          {
+            name: "Dashboard",
+            href: "/dashboard",
+            current: router.asPath === "/dashboard",
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -258,6 +253,13 @@ export default function Navbar() {
                     <DropdownMenuContent>
                       <DropdownMenuLabel>My Account</DropdownMenuLabel>
                       <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => {
+                          void router.push("/dashboard");
+                        }}
+                      >
+                        Dashboard
+                      </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => {
                           void signOut();
