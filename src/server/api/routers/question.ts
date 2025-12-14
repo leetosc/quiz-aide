@@ -276,4 +276,255 @@ export const questionRouter = createTRPCRouter({
   getSecretMessage: protectedProcedure.query(() => {
     return "you can now see this secret message!";
   }),
+
+  // Question Bank Endpoints
+
+  // Save questions to the bank
+  saveToBank: protectedProcedure
+    .input(
+      z.object({
+        questions: z.array(
+          z.object({
+            questionText: z.string(),
+            subject: z.string(),
+            answers: z.array(
+              z.object({
+                text: z.string(),
+                isCorrect: z.boolean(),
+              })
+            ),
+          })
+        ),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const createdQuestions = await Promise.all(
+        input.questions.map((q) =>
+          ctx.prisma.question.create({
+            data: {
+              questionText: q.questionText,
+              subject: q.subject,
+              authorId: userId,
+              answers: {
+                create: q.answers.map((a) => ({
+                  answerText: a.text,
+                  isCorrect: a.isCorrect,
+                })),
+              },
+            },
+            include: {
+              answers: true,
+            },
+          })
+        )
+      );
+
+      return createdQuestions;
+    }),
+
+  // Get all questions in user's bank with optional search/filter
+  getBank: protectedProcedure
+    .input(
+      z
+        .object({
+          search: z.string().optional(),
+          subject: z.string().optional(),
+          starredOnly: z.boolean().optional(),
+          limit: z.number().min(1).max(100).default(50),
+          cursor: z.string().optional(),
+        })
+        .optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      const limit = input?.limit ?? 50;
+
+      const where: {
+        authorId: string;
+        isStarred?: boolean;
+        subject?: string;
+        questionText?: { contains: string };
+      } = {
+        authorId: userId,
+      };
+
+      if (input?.starredOnly) {
+        where.isStarred = true;
+      }
+
+      if (input?.subject) {
+        where.subject = input.subject;
+      }
+
+      if (input?.search) {
+        where.questionText = {
+          contains: input.search,
+        };
+      }
+
+      const questions = await ctx.prisma.question.findMany({
+        where,
+        include: {
+          answers: true,
+          quizzes: {
+            include: {
+              quiz: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: [{ isStarred: "desc" }, { updatedAt: "desc" }],
+        take: limit + 1,
+        cursor: input?.cursor ? { id: input.cursor } : undefined,
+      });
+
+      let nextCursor: string | undefined = undefined;
+      if (questions.length > limit) {
+        const nextItem = questions.pop();
+        nextCursor = nextItem?.id;
+      }
+
+      return {
+        questions,
+        nextCursor,
+      };
+    }),
+
+  // Get unique subjects for filtering
+  getSubjects: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+
+    const subjects = await ctx.prisma.question.findMany({
+      where: { authorId: userId },
+      select: { subject: true },
+      distinct: ["subject"],
+    });
+
+    return subjects.map((s) => s.subject);
+  }),
+
+  // Update a question
+  update: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        questionText: z.string().optional(),
+        subject: z.string().optional(),
+        answers: z
+          .array(
+            z.object({
+              id: z.string().optional(),
+              text: z.string(),
+              isCorrect: z.boolean(),
+            })
+          )
+          .optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      // Verify ownership
+      const existing = await ctx.prisma.question.findUnique({
+        where: { id: input.id },
+      });
+
+      if (!existing || existing.authorId !== userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You don't have permission to update this question",
+        });
+      }
+
+      // Update question
+      const updateData: { questionText?: string; subject?: string } = {};
+      if (input.questionText) updateData.questionText = input.questionText;
+      if (input.subject) updateData.subject = input.subject;
+
+      // If answers are provided, delete existing and create new ones
+      if (input.answers) {
+        await ctx.prisma.answer.deleteMany({
+          where: { questionId: input.id },
+        });
+
+        // Create answers one by one (SQLite doesn't support createMany)
+        for (const a of input.answers) {
+          await ctx.prisma.answer.create({
+            data: {
+              questionId: input.id,
+              answerText: a.text,
+              isCorrect: a.isCorrect,
+            },
+          });
+        }
+      }
+
+      return ctx.prisma.question.update({
+        where: { id: input.id },
+        data: updateData,
+        include: {
+          answers: true,
+        },
+      });
+    }),
+
+  // Delete a question from the bank
+  delete: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      // Verify ownership
+      const existing = await ctx.prisma.question.findUnique({
+        where: { id: input.id },
+      });
+
+      if (!existing || existing.authorId !== userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You don't have permission to delete this question",
+        });
+      }
+
+      // Delete from any quizzes first
+      await ctx.prisma.quizQuestion.deleteMany({
+        where: { questionId: input.id },
+      });
+
+      return ctx.prisma.question.delete({
+        where: { id: input.id },
+      });
+    }),
+
+  // Toggle star on a question
+  toggleStar: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      // Verify ownership
+      const existing = await ctx.prisma.question.findUnique({
+        where: { id: input.id },
+      });
+
+      if (!existing || existing.authorId !== userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You don't have permission to modify this question",
+        });
+      }
+
+      return ctx.prisma.question.update({
+        where: { id: input.id },
+        data: {
+          isStarred: !existing.isStarred,
+        },
+      });
+    }),
 });
