@@ -71,12 +71,14 @@ export default function Home() {
     DIFFICULTY_LEVELS.COLLEGE
   );
 
-  // Set default model to GPT-5.2 for logged in users
+  // Set default model to GPT-5.2 for logged in users only on mount if currently set to GPT-5-mini
   useEffect(() => {
     if (isLoggedIn && model === MODELS.GPT_5_MINI) {
       setModel(MODELS.GPT_5_2);
     }
-  }, [isLoggedIn, model]);
+    // Only run once when user logs in the first time
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn]);
 
   const [questions, setQuestions] = useState<QuestionsType>([]);
   const [isExporting, setIsExporting] = useState(false);
@@ -102,6 +104,7 @@ export default function Home() {
   );
   const [showExportModal, setShowExportModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [savedQuizShortId, setSavedQuizShortId] = useState<string | null>(null);
   const [savedQuizId, setSavedQuizId] = useState<string | null>(null);
 
   const { toast } = useToast();
@@ -113,6 +116,7 @@ export default function Home() {
   const generateQuestionSingle = api.questionRouter.generateOne.useMutation();
   const generateTitle = api.quiz.generateTitle.useMutation();
   const createQuiz = api.quiz.create.useMutation();
+  const replaceQuestion = api.quiz.replaceQuestionByOrder.useMutation();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -128,6 +132,7 @@ export default function Home() {
     setShowQuestions(false);
     setShowAnswers(false);
     setHasExported(false);
+    setSavedQuizShortId(null);
     setSavedQuizId(null);
 
     const generatedQuestions: QuestionType[] = [];
@@ -190,6 +195,7 @@ export default function Home() {
         })),
       });
 
+      setSavedQuizShortId(quiz.shortId);
       setSavedQuizId(quiz.id);
       toast({
         title: "Quiz saved!",
@@ -263,6 +269,21 @@ export default function Home() {
       setQuestions((prev) =>
         prev.map((q, i) => (i === questionIndex ? newQuestion : q))
       );
+
+      // If quiz is already saved, update the question in the database
+      if (savedQuizId) {
+        try {
+          await replaceQuestion.mutateAsync({
+            quizId: savedQuizId,
+            order: questionIndex,
+            questionText: newQuestion.questionText,
+            answers: newQuestion.answers,
+          });
+        } catch (updateError) {
+          console.error("Failed to update question in database:", updateError);
+          // Don't show error to user since local state is updated
+        }
+      }
     } catch (e) {
       console.log(e);
       toast({
@@ -532,11 +553,11 @@ export default function Home() {
                   </Button>
                   {isLoggedIn && (
                     <>
-                      {savedQuizId ? (
-                        <Link href={`/quiz/${savedQuizId}`}>
+                      {savedQuizShortId ? (
+                        <Link href={`/quiz/${savedQuizShortId}`}>
                           <Button variant="outline">
                             <HiOutlineCollection className="mr-1 text-lg" />
-                            View in Dashboard
+                            View Quiz
                           </Button>
                         </Link>
                       ) : (

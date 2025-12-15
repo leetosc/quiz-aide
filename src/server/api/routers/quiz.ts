@@ -441,4 +441,84 @@ export const quizRouter = createTRPCRouter({
 
       return { success: true };
     }),
+
+  // Replace a question in a quiz by its order position
+  replaceQuestionByOrder: protectedProcedure
+    .input(
+      z.object({
+        quizId: z.string(),
+        order: z.number(),
+        questionText: z.string(),
+        answers: z.array(
+          z.object({
+            text: z.string(),
+            isCorrect: z.boolean(),
+          })
+        ),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      // Verify quiz ownership
+      const quiz = await ctx.prisma.quiz.findUnique({
+        where: { id: input.quizId },
+      });
+
+      if (!quiz || quiz.authorId !== userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You don't have permission to modify this quiz",
+        });
+      }
+
+      // Find the QuizQuestion entry at the given order
+      const quizQuestion = await ctx.prisma.quizQuestion.findFirst({
+        where: {
+          quizId: input.quizId,
+          order: input.order,
+        },
+        include: {
+          question: true,
+        },
+      });
+
+      if (!quizQuestion) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Question not found at the specified position",
+        });
+      }
+
+      // Update the question text
+      await ctx.prisma.question.update({
+        where: { id: quizQuestion.questionId },
+        data: {
+          questionText: input.questionText,
+        },
+      });
+
+      // Delete existing answers and create new ones
+      await ctx.prisma.answer.deleteMany({
+        where: { questionId: quizQuestion.questionId },
+      });
+
+      for (const a of input.answers) {
+        await ctx.prisma.answer.create({
+          data: {
+            questionId: quizQuestion.questionId,
+            answerText: a.text,
+            isCorrect: a.isCorrect,
+          },
+        });
+      }
+
+      // Update quiz's updatedAt timestamp
+      await ctx.prisma.quiz.update({
+        where: { id: input.quizId },
+        data: { updatedAt: new Date() },
+      });
+
+      return { success: true };
+    }),
 });
