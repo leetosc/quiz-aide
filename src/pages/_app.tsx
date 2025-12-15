@@ -5,6 +5,7 @@ import { api } from "~/utils/api";
 import "~/styles/globals.css";
 import { ThemeProvider } from "~/components/theme-provider";
 import Navbar from "~/components/Navbar/Navbar";
+import { Toaster } from "~/components/ui/toaster";
 import PlausibleProvider from "next-plausible";
 import { env } from "~/env.mjs";
 
@@ -23,6 +24,7 @@ const MyApp: AppType<{ session: Session | null }> = ({
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <Navbar />
           <Component {...pageProps} />
+          <Toaster />
         </ThemeProvider>
       </PlausibleProvider>
     </SessionProvider>

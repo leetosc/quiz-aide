@@ -1,9 +1,14 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
 import { Configuration, OpenAIApi } from "openai";
 import { env } from "~/env.mjs";
 import { TRPCError } from "@trpc/server";
 import { MODELS } from "~/utils/constants";
+import { nanoid } from "nanoid";
 
 const getOpenAI = (deploymentId: string) => {
   const configuration = new Configuration({
@@ -91,7 +96,7 @@ export const quizRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
 
-      // Create the quiz
+      // Create the quiz with a unique shortId
       const quiz = await ctx.prisma.quiz.create({
         data: {
           name: input.name,
@@ -100,6 +105,7 @@ export const quizRouter = createTRPCRouter({
           timeLimit: input.timeLimit,
           difficulty: input.difficulty,
           authorId: userId,
+          shortId: nanoid(9),
         },
       });
 
@@ -217,6 +223,46 @@ export const quizRouter = createTRPCRouter({
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "You don't have permission to view this quiz",
+        });
+      }
+
+      return quiz;
+    }),
+
+  // Get a quiz by shortId (public access)
+  getByShortId: publicProcedure
+    .input(z.object({ shortId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const quiz = await ctx.prisma.quiz.findUnique({
+        where: {
+          shortId: input.shortId,
+        },
+        include: {
+          questions: {
+            include: {
+              question: {
+                include: {
+                  answers: true,
+                },
+              },
+            },
+            orderBy: {
+              order: "asc",
+            },
+          },
+          author: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      });
+
+      if (!quiz) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Quiz not found",
         });
       }
 

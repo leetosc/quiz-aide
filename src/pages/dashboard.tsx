@@ -54,6 +54,7 @@ import {
   HiOutlineClock,
   HiOutlineCollection,
   HiOutlineDownload,
+  HiOutlineEye,
 } from "react-icons/hi";
 import { CheckCircleIcon, XCircleIcon } from "lucide-react";
 import { format } from "date-fns";
@@ -262,10 +263,18 @@ export default function Dashboard() {
                         </div>
                       </CardContent>
                       <CardFooter className="flex gap-2">
-                        <Link href={`/quiz/${quiz.id}`} className="flex-1">
+                        <Link
+                          href={`/quiz/${quiz.shortId ?? quiz.id}`}
+                          className="flex-1"
+                        >
                           <Button variant="outline" className="w-full">
-                            <HiOutlinePencil className="mr-2 h-4 w-4" />
-                            Edit
+                            <HiOutlineEye className="mr-2 h-4 w-4" />
+                            View
+                          </Button>
+                        </Link>
+                        <Link href={`/quiz/${quiz.id}/edit`}>
+                          <Button variant="outline" size="icon">
+                            <HiOutlinePencil className="h-4 w-4" />
                           </Button>
                         </Link>
                         <Button
@@ -556,5 +565,3 @@ export default function Dashboard() {
     </>
   );
 }
-
-

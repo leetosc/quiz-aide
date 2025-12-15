@@ -51,6 +51,7 @@
     "cmdk": "^0.2.0",
     "date-fns": "^2.30.0",
     "lucide-react": "^0.252.0",
+    "nanoid": "^5.1.6",
     "next": "^13.4.2",
     "next-auth": "^4.22.1",
     "next-plausible": "^3.8.0",

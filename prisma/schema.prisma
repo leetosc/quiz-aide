@@ -106,6 +106,7 @@ model Answer {
 
 model Quiz {
     id          String         @id @default(cuid())
+    shortId     String         @unique
     createdAt   DateTime       @default(now())
     updatedAt   DateTime       @updatedAt
     name        String
