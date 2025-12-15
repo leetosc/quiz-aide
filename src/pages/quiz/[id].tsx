@@ -67,7 +67,7 @@ type Props = {
 const QUESTION_CHAR_LIMIT = 120;
 const ANSWER_CHAR_LIMIT = 75;
 
-export const getStaticPaths: GetStaticPaths = async () => {
+export const getStaticPaths: GetStaticPaths = () => {
   // We'll generate pages on-demand, no pre-rendering at build time
   return {
     paths: [],
