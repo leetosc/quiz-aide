@@ -42,7 +42,8 @@ import {
   HiOutlineEye,
 } from "react-icons/hi";
 import { MdFileDownload } from "react-icons/md";
-import { CheckCircleIcon, XCircleIcon } from "lucide-react";
+import { CheckCircleIcon, XCircleIcon, RefreshCw } from "lucide-react";
+import { MODELS, DIFFICULTY_LEVELS } from "~/utils/constants";
 
 export default function QuizEditor() {
   const router = useRouter();
@@ -65,6 +66,9 @@ export default function QuizEditor() {
     questionIndex: number;
     answerIndex: number;
   } | null>(null);
+  const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(
+    null
+  );
 
   // Redirect if not logged in
   useEffect(() => {
@@ -150,6 +154,13 @@ export default function QuizEditor() {
     },
   });
 
+  const generateQuestionSingle = api.questionRouter.generateOne.useMutation();
+  const replaceQuestion = api.quiz.replaceQuestionByOrder.useMutation({
+    onSuccess: () => {
+      void refetchQuiz();
+    },
+  });
+
   const handleSaveTitle = () => {
     if (quiz && editedTitle.trim()) {
       updateQuiz.mutate({ id: quiz.id, name: editedTitle.trim() });
@@ -213,6 +224,41 @@ export default function QuizEditor() {
       });
     }
     setEditingAnswerIndex(null);
+  };
+
+  const handleRegenerateQuestion = async (questionIndex: number) => {
+    if (!quiz) return;
+
+    setRegeneratingIndex(questionIndex);
+    try {
+      // Generate a new question using the quiz's topic and difficulty
+      const newQuestion = await generateQuestionSingle.mutateAsync({
+        topic: quiz.topic || "General Knowledge",
+        previousQuestions: quiz.questions
+          .filter((_, i) => i !== questionIndex)
+          .map((q) => q.question.questionText),
+        model: MODELS.GPT_5_MINI,
+        difficultyLevel: quiz.difficulty || DIFFICULTY_LEVELS.COLLEGE,
+      });
+
+      // Replace the question in the database
+      await replaceQuestion.mutateAsync({
+        quizId: quiz.id,
+        order: questionIndex,
+        questionText: newQuestion.questionText,
+        answers: newQuestion.answers,
+      });
+
+      toast({ title: "Question regenerated" });
+    } catch (e) {
+      console.error("Failed to regenerate question:", e);
+      toast({
+        title: "Failed to regenerate question",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    }
+    setRegeneratingIndex(null);
   };
 
   const handleShareClick = () => {
@@ -614,15 +660,33 @@ export default function QuizEditor() {
                           </div>
                         </div>
 
-                        {/* Remove button */}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="flex-shrink-0 text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
-                          onClick={() => setRemoveQuestionId(question.id)}
-                        >
-                          <HiOutlineTrash className="h-4 w-4" />
-                        </Button>
+                        {/* Action buttons */}
+                        <div className="flex flex-shrink-0 flex-col gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-blue-500 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950"
+                            onClick={() => void handleRegenerateQuestion(index)}
+                            disabled={regeneratingIndex !== null}
+                            title="Regenerate question"
+                          >
+                            <RefreshCw
+                              className={`h-4 w-4 ${
+                                regeneratingIndex === index
+                                  ? "animate-spin"
+                                  : ""
+                              }`}
+                            />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
+                            onClick={() => setRemoveQuestionId(question.id)}
+                          >
+                            <HiOutlineTrash className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
