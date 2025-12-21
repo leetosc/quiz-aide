@@ -12,6 +12,7 @@ import {
   Pencil,
   Trash2,
   RefreshCw,
+  Plus,
 } from "lucide-react";
 import { BsQuestionCircle } from "react-icons/bs";
 import {
@@ -102,6 +103,7 @@ export default function Home() {
   const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(
     null
   );
+  const [isAddingQuestion, setIsAddingQuestion] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [savedQuizShortId, setSavedQuizShortId] = useState<string | null>(null);
@@ -117,6 +119,7 @@ export default function Home() {
   const generateTitle = api.quiz.generateTitle.useMutation();
   const createQuiz = api.quiz.create.useMutation();
   const replaceQuestion = api.quiz.replaceQuestionByOrder.useMutation();
+  const addNewQuestion = api.quiz.addNewQuestion.useMutation();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -292,6 +295,50 @@ export default function Home() {
       });
     }
     setRegeneratingIndex(null);
+  };
+
+  const handleAddQuestion = async () => {
+    setIsAddingQuestion(true);
+    try {
+      const newQuestion = await generateQuestionSingle.mutateAsync({
+        topic: topicInput,
+        previousQuestions: questions.map((q) => q.questionText),
+        model: model,
+        difficultyLevel: difficultyLevel,
+      });
+
+      // Add to local state
+      setQuestions((prev) => [...prev, newQuestion]);
+
+      // If quiz is already saved, add the question to the database
+      if (savedQuizId) {
+        try {
+          await addNewQuestion.mutateAsync({
+            quizId: savedQuizId,
+            questionText: newQuestion.questionText,
+            answers: newQuestion.answers,
+          });
+        } catch (updateError) {
+          console.error("Failed to save question: ", updateError);
+          toast({
+            title: "Warning",
+            description: "Failed to save question. Please try again.",
+          });
+        }
+      }
+
+      toast({
+        title: "Question added!",
+        description: "A new question has been added to your quiz.",
+      });
+    } catch (e) {
+      console.log(e);
+      toast({
+        title: "Error",
+        description: "Failed to add question. Please try again.",
+      });
+    }
+    setIsAddingQuestion(false);
   };
 
   const exportToExcel = () => {
@@ -633,193 +680,219 @@ export default function Home() {
           ) : null}
           <div className="flex flex-col items-center gap-4">
             {showQuestions ? (
-              <div className="container mt-1 grid w-full grid-cols-1 gap-4 px-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {questions.map((question, questionIndex) => {
-                  const isEditingQuestion =
-                    editingQuestionIndex === questionIndex;
-                  const questionOverLimit =
-                    question.questionText.length > QUESTION_CHAR_LIMIT;
-                  const isRegenerating = regeneratingIndex === questionIndex;
+              <>
+                <div className="container mt-1 grid w-full grid-cols-1 gap-4 px-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {questions.map((question, questionIndex) => {
+                    const isEditingQuestion =
+                      editingQuestionIndex === questionIndex;
+                    const questionOverLimit =
+                      question.questionText.length > QUESTION_CHAR_LIMIT;
+                    const isRegenerating = regeneratingIndex === questionIndex;
 
-                  return (
-                    <div
-                      key={questionIndex}
-                      className={`relative flex flex-col rounded-lg border bg-slate-200 p-4 transition-all dark:bg-slate-900 ${
-                        questionOverLimit
-                          ? "border-red-400 dark:border-red-600"
-                          : "border-indigo-400 dark:border-indigo-700"
-                      } ${isRegenerating ? "opacity-50" : ""}`}
-                    >
-                      {/* Action buttons */}
-                      <div className="absolute -top-2 right-2 flex gap-1">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void handleRegenerateQuestion(questionIndex)
-                          }
-                          disabled={isRegenerating}
-                          className="rounded-full bg-blue-500 p-1.5 text-white shadow-sm transition-colors hover:bg-blue-600 disabled:opacity-50"
-                          title="Regenerate question"
-                        >
-                          <RefreshCw
-                            className={`h-3 w-3 ${
-                              isRegenerating ? "animate-spin" : ""
-                            }`}
-                          />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setEditingQuestionIndex(questionIndex)}
-                          className="rounded-full bg-amber-500 p-1.5 text-white shadow-sm transition-colors hover:bg-amber-600"
-                          title="Edit question"
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteQuestion(questionIndex)}
-                          className="rounded-full bg-red-500 p-1.5 text-white shadow-sm transition-colors hover:bg-red-600"
-                          title="Delete question"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </div>
+                    return (
+                      <div
+                        key={questionIndex}
+                        className={`relative flex flex-col rounded-lg border bg-slate-200 p-4 transition-all dark:bg-slate-900 ${
+                          questionOverLimit
+                            ? "border-red-400 dark:border-red-600"
+                            : "border-indigo-400 dark:border-indigo-700"
+                        } ${isRegenerating ? "opacity-50" : ""}`}
+                      >
+                        {/* Action buttons */}
+                        <div className="absolute -top-2 right-2 flex gap-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void handleRegenerateQuestion(questionIndex)
+                            }
+                            disabled={isRegenerating}
+                            className="rounded-full bg-blue-500 p-1.5 text-white shadow-sm transition-colors hover:bg-blue-600 disabled:opacity-50"
+                            title="Regenerate question"
+                          >
+                            <RefreshCw
+                              className={`h-3 w-3 ${
+                                isRegenerating ? "animate-spin" : ""
+                              }`}
+                            />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setEditingQuestionIndex(questionIndex)
+                            }
+                            className="rounded-full bg-amber-500 p-1.5 text-white shadow-sm transition-colors hover:bg-amber-600"
+                            title="Edit question"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteQuestion(questionIndex)}
+                            className="rounded-full bg-red-500 p-1.5 text-white shadow-sm transition-colors hover:bg-red-600"
+                            title="Delete question"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
 
-                      {/* Question text */}
-                      <div className="mb-3 mt-2">
-                        {isEditingQuestion ? (
-                          <div className="space-y-2">
-                            <textarea
-                              className="w-full rounded border bg-white p-2 text-sm dark:bg-slate-800 dark:text-white"
-                              defaultValue={question.questionText}
-                              rows={3}
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" && !e.shiftKey) {
-                                  e.preventDefault();
+                        {/* Question text */}
+                        <div className="mb-3 mt-2">
+                          {isEditingQuestion ? (
+                            <div className="space-y-2">
+                              <textarea
+                                className="w-full rounded border bg-white p-2 text-sm dark:bg-slate-800 dark:text-white"
+                                defaultValue={question.questionText}
+                                rows={3}
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleUpdateQuestion(
+                                      questionIndex,
+                                      e.currentTarget.value
+                                    );
+                                  }
+                                  if (e.key === "Escape") {
+                                    setEditingQuestionIndex(null);
+                                  }
+                                }}
+                                onBlur={(e) =>
                                   handleUpdateQuestion(
                                     questionIndex,
-                                    e.currentTarget.value
-                                  );
+                                    e.target.value
+                                  )
                                 }
-                                if (e.key === "Escape") {
-                                  setEditingQuestionIndex(null);
-                                }
-                              }}
-                              onBlur={(e) =>
-                                handleUpdateQuestion(
-                                  questionIndex,
-                                  e.target.value
-                                )
-                              }
-                            />
-                          </div>
-                        ) : (
-                          <h2 className="text-sm font-bold text-black dark:text-white">
-                            {questionIndex + 1}. {question.questionText}
-                          </h2>
-                        )}
-                        <div
-                          className={`mt-1 text-xs ${
-                            questionOverLimit ? "text-red-500" : "text-gray-400"
-                          }`}
-                        ></div>
-                      </div>
+                              />
+                            </div>
+                          ) : (
+                            <h2 className="text-sm font-bold text-black dark:text-white">
+                              {questionIndex + 1}. {question.questionText}
+                            </h2>
+                          )}
+                          <div
+                            className={`mt-1 text-xs ${
+                              questionOverLimit
+                                ? "text-red-500"
+                                : "text-gray-400"
+                            }`}
+                          ></div>
+                        </div>
 
-                      {/* Answers */}
-                      <ul className="grid grid-cols-1 gap-2">
-                        {question.answers.map((answer, answerIndex) => {
-                          const isEditingAnswer =
-                            editingAnswerIndex?.questionIndex ===
-                              questionIndex &&
-                            editingAnswerIndex?.answerIndex === answerIndex;
-                          const answerOverLimit =
-                            answer.text.length > ANSWER_CHAR_LIMIT;
+                        {/* Answers */}
+                        <ul className="grid grid-cols-1 gap-2">
+                          {question.answers.map((answer, answerIndex) => {
+                            const isEditingAnswer =
+                              editingAnswerIndex?.questionIndex ===
+                                questionIndex &&
+                              editingAnswerIndex?.answerIndex === answerIndex;
+                            const answerOverLimit =
+                              answer.text.length > ANSWER_CHAR_LIMIT;
 
-                          return (
-                            <li
-                              key={answerIndex}
-                              className={`group flex flex-row items-center rounded-md p-2 ${
-                                showAnswers && answer.isCorrect
-                                  ? "bg-green-100 dark:bg-green-900/30"
-                                  : "bg-slate-100 dark:bg-slate-800"
-                              } ${
-                                answerOverLimit ? "ring-1 ring-red-400" : ""
-                              }`}
-                            >
-                              {showAnswers ? (
-                                answer.isCorrect ? (
-                                  <CheckCircleIcon
-                                    className="-ml-1 mr-2 h-5 w-5 flex-none text-green-500 dark:text-green-300"
-                                    aria-hidden="true"
-                                  />
+                            return (
+                              <li
+                                key={answerIndex}
+                                className={`group flex flex-row items-center rounded-md p-2 ${
+                                  showAnswers && answer.isCorrect
+                                    ? "bg-green-100 dark:bg-green-900/30"
+                                    : "bg-slate-100 dark:bg-slate-800"
+                                } ${
+                                  answerOverLimit ? "ring-1 ring-red-400" : ""
+                                }`}
+                              >
+                                {showAnswers ? (
+                                  answer.isCorrect ? (
+                                    <CheckCircleIcon
+                                      className="-ml-1 mr-2 h-5 w-5 flex-none text-green-500 dark:text-green-300"
+                                      aria-hidden="true"
+                                    />
+                                  ) : (
+                                    <XCircleIcon
+                                      className="-ml-1 mr-2 h-5 w-5 flex-none text-red-500 dark:text-red-300"
+                                      aria-hidden="true"
+                                    />
+                                  )
                                 ) : (
-                                  <XCircleIcon
-                                    className="-ml-1 mr-2 h-5 w-5 flex-none text-red-500 dark:text-red-300"
+                                  <BsQuestionCircle
+                                    className="-ml-1 mr-2 h-5 w-5 flex-none text-blue-500 dark:text-blue-300"
                                     aria-hidden="true"
                                   />
-                                )
-                              ) : (
-                                <BsQuestionCircle
-                                  className="-ml-1 mr-2 h-5 w-5 flex-none text-blue-500 dark:text-blue-300"
-                                  aria-hidden="true"
-                                />
-                              )}
+                                )}
 
-                              {isEditingAnswer ? (
-                                <input
-                                  type="text"
-                                  className="flex-1 rounded border bg-white px-2 py-1 text-sm dark:bg-slate-700 dark:text-white"
-                                  defaultValue={answer.text}
-                                  autoFocus
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
+                                {isEditingAnswer ? (
+                                  <input
+                                    type="text"
+                                    className="flex-1 rounded border bg-white px-2 py-1 text-sm dark:bg-slate-700 dark:text-white"
+                                    defaultValue={answer.text}
+                                    autoFocus
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        handleUpdateAnswer(
+                                          questionIndex,
+                                          answerIndex,
+                                          e.currentTarget.value
+                                        );
+                                      }
+                                      if (e.key === "Escape") {
+                                        setEditingAnswerIndex(null);
+                                      }
+                                    }}
+                                    onBlur={(e) =>
                                       handleUpdateAnswer(
                                         questionIndex,
                                         answerIndex,
-                                        e.currentTarget.value
-                                      );
+                                        e.target.value
+                                      )
                                     }
-                                    if (e.key === "Escape") {
-                                      setEditingAnswerIndex(null);
-                                    }
-                                  }}
-                                  onBlur={(e) =>
-                                    handleUpdateAnswer(
-                                      questionIndex,
-                                      answerIndex,
-                                      e.target.value
-                                    )
-                                  }
-                                />
-                              ) : (
-                                <div className="flex flex-1 items-center justify-between">
-                                  <span className="text-sm text-black dark:text-white">
-                                    {answer.text}
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setEditingAnswerIndex({
-                                        questionIndex,
-                                        answerIndex,
-                                      })
-                                    }
-                                    className="ml-2 hidden rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600 group-hover:block dark:hover:bg-gray-700 dark:hover:text-gray-300"
-                                    title="Edit answer"
-                                  >
-                                    <Pencil className="h-3 w-3" />
-                                  </button>
-                                </div>
-                              )}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  );
-                })}
-              </div>
+                                  />
+                                ) : (
+                                  <div className="flex flex-1 items-center justify-between">
+                                    <span className="text-sm text-black dark:text-white">
+                                      {answer.text}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setEditingAnswerIndex({
+                                          questionIndex,
+                                          answerIndex,
+                                        })
+                                      }
+                                      className="ml-2 hidden rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600 group-hover:block dark:hover:bg-gray-700 dark:hover:text-gray-300"
+                                      title="Edit answer"
+                                    >
+                                      <Pencil className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Add Question Button */}
+                <Button
+                  variant="outline"
+                  onClick={() => void handleAddQuestion()}
+                  disabled={isAddingQuestion}
+                  className="mt-2 border-dashed border-cyan-500 text-cyan-600 hover:bg-cyan-50 hover:text-cyan-700 dark:border-cyan-400 dark:text-cyan-400 dark:hover:bg-cyan-950 dark:hover:text-cyan-300"
+                >
+                  {isAddingQuestion ? (
+                    <>
+                      <Spinner size="md" />
+                      <span className="ml-2">Generating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="mr-1 h-4 w-4" />
+                      Add Another Question
+                    </>
+                  )}
+                </Button>
+              </>
             ) : null}
           </div>
           {/* <div className="flex flex-col items-center gap-2">

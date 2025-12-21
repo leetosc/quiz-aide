@@ -521,4 +521,74 @@ export const quizRouter = createTRPCRouter({
 
       return { success: true };
     }),
+
+  // Add a new question with answers to a quiz
+  addNewQuestion: protectedProcedure
+    .input(
+      z.object({
+        quizId: z.string(),
+        questionText: z.string(),
+        answers: z.array(
+          z.object({
+            text: z.string(),
+            isCorrect: z.boolean(),
+          })
+        ),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      // Verify quiz ownership
+      const quiz = await ctx.prisma.quiz.findUnique({
+        where: { id: input.quizId },
+      });
+
+      if (!quiz || quiz.authorId !== userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You don't have permission to modify this quiz",
+        });
+      }
+
+      // Get current max order
+      const maxOrder = await ctx.prisma.quizQuestion.findFirst({
+        where: { quizId: input.quizId },
+        orderBy: { order: "desc" },
+        select: { order: true },
+      });
+      const newOrder = (maxOrder?.order ?? -1) + 1;
+
+      // Create the question with answers
+      const question = await ctx.prisma.question.create({
+        data: {
+          questionText: input.questionText,
+          subject: quiz.topic || "General",
+          authorId: userId,
+          answers: {
+            create: input.answers.map((a) => ({
+              answerText: a.text,
+              isCorrect: a.isCorrect,
+            })),
+          },
+        },
+      });
+
+      // Link question to quiz
+      await ctx.prisma.quizQuestion.create({
+        data: {
+          quizId: input.quizId,
+          questionId: question.id,
+          order: newOrder,
+        },
+      });
+
+      // Update quiz's updatedAt timestamp
+      await ctx.prisma.quiz.update({
+        where: { id: input.quizId },
+        data: { updatedAt: new Date() },
+      });
+
+      return { questionId: question.id, order: newOrder };
+    }),
 });
