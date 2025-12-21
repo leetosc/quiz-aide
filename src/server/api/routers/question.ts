@@ -173,7 +173,7 @@ export const questionRouter = createTRPCRouter({
               ", "
             )}`
           : ""
-      }. Come up with a variety of questions on the topic.`;
+      }. Come up with a variety of questions on the topic. Use the generate_question function to generate the question.`;
 
       try {
         const chatCompletion = await openai.createChatCompletion(
