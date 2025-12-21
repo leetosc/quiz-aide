@@ -193,7 +193,8 @@ export const questionRouter = createTRPCRouter({
                       properties: {
                         questionText: {
                           type: "string",
-                          description: "The text of the question",
+                          description:
+                            "The text of the question. Max 120 characters.",
                         },
                         answers: {
                           type: "array",
@@ -202,12 +203,13 @@ export const questionRouter = createTRPCRouter({
                             properties: {
                               text: {
                                 type: "string",
-                                description: "The text of the answer",
+                                description:
+                                  "The text of the answer choice. Max 75 characters.",
                               },
                               isCorrect: {
                                 type: "boolean",
                                 description:
-                                  "Indicates whether the answer is correct",
+                                  "Indicates whether the answer choice is correct",
                               },
                             },
                             required: ["text", "isCorrect"],
