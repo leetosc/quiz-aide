@@ -69,6 +69,7 @@ export default function QuizEditor() {
   const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(
     null
   );
+  const [isGeneratingNewQuestion, setIsGeneratingNewQuestion] = useState(false);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -156,6 +157,11 @@ export default function QuizEditor() {
 
   const generateQuestionSingle = api.questionRouter.generateOne.useMutation();
   const replaceQuestion = api.quiz.replaceQuestionByOrder.useMutation({
+    onSuccess: () => {
+      void refetchQuiz();
+    },
+  });
+  const addNewQuestion = api.quiz.addNewQuestion.useMutation({
     onSuccess: () => {
       void refetchQuiz();
     },
@@ -259,6 +265,38 @@ export default function QuizEditor() {
       });
     }
     setRegeneratingIndex(null);
+  };
+
+  const handleGenerateNewQuestion = async () => {
+    if (!quiz) return;
+
+    setIsGeneratingNewQuestion(true);
+    try {
+      // Generate a new question using the quiz's topic and difficulty
+      const newQuestion = await generateQuestionSingle.mutateAsync({
+        topic: quiz.topic || "General Knowledge",
+        previousQuestions: quiz.questions.map((q) => q.question.questionText),
+        model: MODELS.GPT_5_MINI,
+        difficultyLevel: quiz.difficulty || DIFFICULTY_LEVELS.COLLEGE,
+      });
+
+      // Add the question to the quiz
+      await addNewQuestion.mutateAsync({
+        quizId: quiz.id,
+        questionText: newQuestion.questionText,
+        answers: newQuestion.answers,
+      });
+
+      toast({ title: "Question added!" });
+    } catch (e) {
+      console.error("Failed to generate question:", e);
+      toast({
+        title: "Failed to generate question",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    }
+    setIsGeneratingNewQuestion(false);
   };
 
   const handleShareClick = () => {
@@ -494,12 +532,28 @@ export default function QuizEditor() {
                   No questions yet
                 </h3>
                 <p className="mb-4 text-center text-gray-600 dark:text-gray-400">
-                  Add questions from your question bank
+                  Add questions from your question bank or generate new ones
                 </p>
-                <Button onClick={() => setAddQuestionModalOpen(true)}>
-                  <HiOutlinePlus className="mr-2 h-4 w-4" />
-                  Add Question
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setAddQuestionModalOpen(true)}
+                  >
+                    <HiOutlinePlus className="mr-2 h-4 w-4" />
+                    From Bank
+                  </Button>
+                  <Button
+                    onClick={() => void handleGenerateNewQuestion()}
+                    disabled={isGeneratingNewQuestion}
+                  >
+                    {isGeneratingNewQuestion ? (
+                      <Spinner size="md" />
+                    ) : (
+                      <HiOutlinePlus className="mr-2 h-4 w-4" />
+                    )}
+                    Generate New
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ) : (
@@ -692,6 +746,31 @@ export default function QuizEditor() {
                   </Card>
                 );
               })}
+
+              {/* Generate New Question Button */}
+              <Card className="border-dashed border-cyan-300 bg-cyan-50/50 transition-colors hover:bg-cyan-50 dark:border-cyan-700 dark:bg-cyan-950/20 dark:hover:bg-cyan-950/40">
+                <CardContent className="p-4">
+                  <button
+                    onClick={() => void handleGenerateNewQuestion()}
+                    disabled={isGeneratingNewQuestion}
+                    className="flex w-full items-center justify-center gap-2 py-2 text-cyan-600 disabled:opacity-50 dark:text-cyan-400"
+                  >
+                    {isGeneratingNewQuestion ? (
+                      <>
+                        <Spinner size="md" />
+                        <span>Generating question...</span>
+                      </>
+                    ) : (
+                      <>
+                        <HiOutlinePlus className="h-5 w-5" />
+                        <span className="font-medium">
+                          Generate Another Question
+                        </span>
+                      </>
+                    )}
+                  </button>
+                </CardContent>
+              </Card>
             </div>
           )}
         </div>
