@@ -8,6 +8,8 @@ import { Configuration, OpenAIApi } from "openai";
 import { env } from "~/env.mjs";
 import { TRPCError } from "@trpc/server";
 import { MODELS, DIFFICULTY_LEVELS } from "~/utils/constants";
+import { generateText, Output } from "ai";
+import { getFoundryModel } from "~/server/ai/foundry";
 
 const getOpenAI = (deploymentId: string) => {
   const configuration = new Configuration({
@@ -21,6 +23,35 @@ const AZURE_API_OPTIONS = {
   params: {
     "api-version": env.AZURE_OPENAI_API_VERSION,
   },
+};
+
+const answerSchema = z.object({
+  text: z.string().max(75),
+  isCorrect: z.boolean(),
+});
+
+const generatedQuestionSchema = z.object({
+  question: z.object({
+    questionText: z.string().max(120),
+    answers: z.array(answerSchema).length(4),
+  }),
+});
+
+type QuestionResponse = z.infer<typeof generatedQuestionSchema>;
+
+const generateTerraQuestion = async (prompt: string) => {
+  const { output } = await generateText({
+    model: getFoundryModel(MODELS.GPT_5_6_TERRA),
+    prompt,
+    output: Output.object({
+      name: "generate_question",
+      description: "Generate a single question with corresponding answers",
+      schema: generatedQuestionSchema,
+    }),
+    reasoning: "low",
+  });
+
+  return output;
 };
 
 export const questionRouter = createTRPCRouter({
@@ -161,8 +192,6 @@ export const questionRouter = createTRPCRouter({
         difficultyMap[input.difficultyLevel ?? DIFFICULTY_LEVELS.COLLEGE] ??
         "college graduates or working professionals";
 
-      const openai = getOpenAI(model);
-
       const questionPrompt = `I want to make a kahoot quiz about ${
         input.topic
       }. Give me ${
@@ -176,78 +205,76 @@ export const questionRouter = createTRPCRouter({
       }. Come up with a variety of questions on the topic. Use the generate_question function to generate the question.`;
 
       try {
-        const chatCompletion = await openai.createChatCompletion(
-          {
-            model: model,
-            messages: [{ role: "user", content: questionPrompt }],
-            functions: [
-              {
-                name: "generate_question",
-                description:
-                  "Generate a single question with corresponding answers",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    question: {
-                      type: "object",
-                      properties: {
-                        questionText: {
-                          type: "string",
-                          description:
-                            "The text of the question. Max 120 characters.",
-                        },
-                        answers: {
-                          type: "array",
-                          items: {
-                            type: "object",
-                            properties: {
-                              text: {
-                                type: "string",
-                                description:
-                                  "The text of the answer choice. Max 75 characters.",
-                              },
-                              isCorrect: {
-                                type: "boolean",
-                                description:
-                                  "Indicates whether the answer choice is correct",
-                              },
-                            },
-                            required: ["text", "isCorrect"],
-                          },
-                        },
-                      },
-                      required: ["questionText", "answers"],
-                    },
-                  },
-                  required: ["question"],
-                },
-              },
-            ],
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore-next-line
-            reasoning_effort: "low",
-          },
-          AZURE_API_OPTIONS
-        );
-
-        console.log(chatCompletion.data);
-
         type Answer = {
           text: string;
           isCorrect: boolean;
         };
 
-        type QuestionResponse = {
-          question: {
-            questionText: string;
-            answers: Answer[];
-          };
-        };
+        let responseQuestion: QuestionResponse;
 
-        const responseQuestion = JSON.parse(
-          chatCompletion.data.choices[0]?.message?.function_call?.arguments ??
-            "{}"
-        ) as QuestionResponse;
+        if (model === MODELS.GPT_5_6_TERRA) {
+          responseQuestion = await generateTerraQuestion(questionPrompt);
+        } else {
+          const openai = getOpenAI(model);
+          const chatCompletion = await openai.createChatCompletion(
+            {
+              model: model,
+              messages: [{ role: "user", content: questionPrompt }],
+              functions: [
+                {
+                  name: "generate_question",
+                  description:
+                    "Generate a single question with corresponding answers",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      question: {
+                        type: "object",
+                        properties: {
+                          questionText: {
+                            type: "string",
+                            description:
+                              "The text of the question. Max 120 characters.",
+                          },
+                          answers: {
+                            type: "array",
+                            items: {
+                              type: "object",
+                              properties: {
+                                text: {
+                                  type: "string",
+                                  description:
+                                    "The text of the answer choice. Max 75 characters.",
+                                },
+                                isCorrect: {
+                                  type: "boolean",
+                                  description:
+                                    "Indicates whether the answer choice is correct",
+                                },
+                              },
+                              required: ["text", "isCorrect"],
+                            },
+                          },
+                        },
+                        required: ["questionText", "answers"],
+                      },
+                    },
+                    required: ["question"],
+                  },
+                },
+              ],
+              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+              // @ts-ignore-next-line
+              reasoning_effort: "low",
+            },
+            AZURE_API_OPTIONS
+          );
+
+          responseQuestion = JSON.parse(
+            chatCompletion.data.choices[0]?.message?.function_call?.arguments ??
+              "{}"
+          ) as QuestionResponse;
+        }
 
         console.log("response questions", responseQuestion);
 

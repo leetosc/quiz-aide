@@ -29,6 +29,8 @@ export const env = createEnv({
     AZURE_OPENAI_API_KEY: z.string(),
     AZURE_OPENAI_ENDPOINT: z.string(),
     AZURE_OPENAI_API_VERSION: z.string().default("2023-05-15"),
+    AZURE_FOUNDRY_API_KEY: z.string().min(1),
+    AZURE_FOUNDRY_ENDPOINT: z.string().url(),
   },
 
   /**
@@ -59,6 +61,8 @@ export const env = createEnv({
     AZURE_OPENAI_API_KEY: process.env.AZURE_OPENAI_API_KEY,
     AZURE_OPENAI_ENDPOINT: process.env.AZURE_OPENAI_ENDPOINT,
     AZURE_OPENAI_API_VERSION: process.env.AZURE_OPENAI_API_VERSION,
+    AZURE_FOUNDRY_API_KEY: process.env.AZURE_FOUNDRY_API_KEY,
+    AZURE_FOUNDRY_ENDPOINT: process.env.AZURE_FOUNDRY_ENDPOINT,
     NEXT_PUBLIC_ANALYTICS_URL: process.env.NEXT_PUBLIC_ANALYTICS_URL,
     NEXT_PUBLIC_ANALYTICS_SITE_NAME:
       process.env.NEXT_PUBLIC_ANALYTICS_SITE_NAME,

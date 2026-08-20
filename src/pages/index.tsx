@@ -519,6 +519,9 @@ export default function Home() {
                           GPT-5 Mini
                         </SelectItem>
                         <SelectItem value={MODELS.GPT_5_2}>GPT-5.2</SelectItem>
+                        <SelectItem value={MODELS.GPT_5_6_TERRA}>
+                          GPT-5.6 Terra
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

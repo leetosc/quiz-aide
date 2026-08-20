@@ -3,6 +3,7 @@ export const MODELS = {
   GPT_5: "gpt-5",
   GPT_5_MINI: "gpt-5-mini",
   GPT_5_2: "gpt-5.2",
+  GPT_5_6_TERRA: "gpt-5.6-terra",
 };
 
 export const DIFFICULTY_LEVELS = {
