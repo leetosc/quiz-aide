@@ -66,16 +66,18 @@ export default function Home() {
 
   const [topicInput, setTopicInput] = useState("");
   const [model, setModel] = useState<string>(
-    sessionStatus === "authenticated" ? MODELS.GPT_5_2 : MODELS.GPT_5_MINI
+    sessionStatus === "authenticated"
+      ? MODELS.GPT_5_6_TERRA
+      : MODELS.GPT_5_MINI
   );
   const [difficultyLevel, setDifficultyLevel] = useState<string>(
     DIFFICULTY_LEVELS.COLLEGE
   );
 
-  // Set default model to GPT-5.2 for logged in users only on mount if currently set to GPT-5-mini
+  // Set default model to GPT-5.6-terra for logged in users only on mount if currently set to GPT-5-mini
   useEffect(() => {
     if (isLoggedIn && model === MODELS.GPT_5_MINI) {
-      setModel(MODELS.GPT_5_2);
+      setModel(MODELS.GPT_5_6_TERRA);
     }
     // Only run once when user logs in the first time
     // eslint-disable-next-line react-hooks/exhaustive-deps
