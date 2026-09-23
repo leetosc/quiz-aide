@@ -524,6 +524,12 @@ export default function Home() {
                         <SelectItem value={MODELS.GPT_5_6_TERRA}>
                           GPT-5.6 Terra
                         </SelectItem>
+                        <SelectItem value={MODELS.GPT_6_LUNA}>
+                          GPT-6 Luna
+                        </SelectItem>
+                        <SelectItem value={MODELS.GPT_6_SOL}>
+                          GPT-6 Sol
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

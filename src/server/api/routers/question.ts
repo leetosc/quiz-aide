@@ -7,7 +7,11 @@ import {
 import { Configuration, OpenAIApi } from "openai";
 import { env } from "~/env.mjs";
 import { TRPCError } from "@trpc/server";
-import { MODELS, DIFFICULTY_LEVELS } from "~/utils/constants";
+import {
+  MODELS,
+  FOUNDRY_MODELS,
+  DIFFICULTY_LEVELS,
+} from "~/utils/constants";
 import { generateText, Output } from "ai";
 import { getFoundryModel } from "~/server/ai/foundry";
 
@@ -39,9 +43,9 @@ const generatedQuestionSchema = z.object({
 
 type QuestionResponse = z.infer<typeof generatedQuestionSchema>;
 
-const generateTerraQuestion = async (prompt: string) => {
+const generateFoundryQuestion = async (prompt: string, model: string) => {
   const { output } = await generateText({
-    model: getFoundryModel(MODELS.GPT_5_6_TERRA),
+    model: getFoundryModel(model),
     prompt,
     output: Output.object({
       name: "generate_question",
@@ -212,8 +216,11 @@ export const questionRouter = createTRPCRouter({
 
         let responseQuestion: QuestionResponse;
 
-        if (model === MODELS.GPT_5_6_TERRA) {
-          responseQuestion = await generateTerraQuestion(questionPrompt);
+        if (FOUNDRY_MODELS.has(model)) {
+          responseQuestion = await generateFoundryQuestion(
+            questionPrompt,
+            model
+          );
         } else {
           const openai = getOpenAI(model);
           const chatCompletion = await openai.createChatCompletion(
