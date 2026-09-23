@@ -58,6 +58,24 @@ const generateFoundryQuestion = async (prompt: string, model: string) => {
   return output;
 };
 
+const suggestedTopicsSchema = z.object({
+  topics: z.array(z.string().max(30)).min(5).max(20),
+});
+
+// LLMs tend to return the same "random" categories for similar prompts, so we
+// seed each call with random starting letters, ask for a larger pool, and
+// sample from it.
+const TOPIC_SEED_LETTERS = "ABCDEFGHIJKLMNOPRSTUVW".split("");
+
+const pickRandom = <T>(items: T[], count: number) => {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j] as T, copy[i] as T];
+  }
+  return copy.slice(0, count);
+};
+
 export const questionRouter = createTRPCRouter({
   hello: publicProcedure
     .input(z.object({ text: z.string() }))
@@ -307,6 +325,37 @@ export const questionRouter = createTRPCRouter({
         });
       }
     }),
+
+  suggestTopics: protectedProcedure.query(async () => {
+    const seedLetters = pickRandom(TOPIC_SEED_LETTERS, 5);
+    const seed = Math.random().toString(36).slice(2, 10);
+
+    const prompt = `Suggest 15 random, broad, general quiz categories that would make a fun kahoot quiz, like the kind you'd see as a category in a trivia game. Each should be 1-3 words. Give 3 categories starting with each of these letters: ${seedLetters.join(
+      ", "
+    )}. Do not include "World History", "Science", "Geography", "Literature", "Pop Culture", or "Sports". Random seed: ${seed}.`;
+
+    try {
+      const { output } = await generateText({
+        model: getFoundryModel(MODELS.GPT_6_LUNA),
+        prompt,
+        output: Output.object({
+          name: "suggest_topics",
+          description: "Suggest quiz categories",
+          schema: suggestedTopicsSchema,
+        }),
+        reasoning: "low",
+      });
+
+      return pickRandom(output.topics, 5);
+    } catch (err) {
+      console.error("Failed to suggest topics:", err);
+
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to suggest topics",
+      });
+    }
+  }),
 
   getSecretMessage: protectedProcedure.query(() => {
     return "you can now see this secret message!";

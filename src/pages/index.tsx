@@ -123,6 +123,17 @@ export default function Home() {
   const replaceQuestion = api.quiz.replaceQuestionByOrder.useMutation();
   const addNewQuestion = api.quiz.addNewQuestion.useMutation();
 
+  // Fetch fresh AI topic suggestions once per page load for logged in users
+  const { data: suggestedTopics } = api.questionRouter.suggestTopics.useQuery(
+    undefined,
+    {
+      enabled: isLoggedIn,
+      staleTime: Infinity,
+      refetchOnWindowFocus: false,
+      retry: false,
+    }
+  );
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -429,20 +440,23 @@ export default function Home() {
                     onChange={(e) => setTopicInput(e.target.value)}
                     placeholder="e.g., World War II, Biology cells, Famous artists"
                   />
-                  <div className="mt-2 hidden flex-wrap gap-2 md:flex">
-                    {[
-                      "World History",
-                      "Science",
-                      "Geography",
-                      "Literature",
-                      "Pop Culture",
-                      "Sports",
-                    ].map((topic) => (
+                  <div className="-mx-12 mt-2 flex gap-2 overflow-x-auto px-12 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0 md:flex-wrap md:overflow-visible md:pb-0 [&::-webkit-scrollbar]:hidden">
+                    {Array.from(
+                      new Set([
+                        "World History",
+                        "Science",
+                        "Geography",
+                        "Literature",
+                        "Pop Culture",
+                        "Sports",
+                        ...(suggestedTopics ?? []),
+                      ])
+                    ).map((topic) => (
                       <button
                         key={topic}
                         type="button"
                         onClick={() => setTopicInput(topic)}
-                        className="rounded-full border border-gray-300 bg-white px-3 py-1 text-xs text-gray-600 transition-colors hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-600 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:border-cyan-500 dark:hover:bg-cyan-950 dark:hover:text-cyan-400"
+                        className="shrink-0 whitespace-nowrap rounded-full border border-gray-300 bg-white px-3 py-1 text-xs text-gray-600 transition-colors hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-600 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:border-cyan-500 dark:hover:bg-cyan-950 dark:hover:text-cyan-400"
                       >
                         {topic}
                       </button>
@@ -535,7 +549,7 @@ export default function Home() {
                   </div>
                 )}
 
-                <div className="col-span-2">
+                <div className="sm:col-span-2">
                   <Button
                     isLoading={
                       generateQuestionSingle.isLoading || isGeneratingMultiple
